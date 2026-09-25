@@ -1,0 +1,13 @@
+.env
+.env.*
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+*.kubeconfig
+secrets/
+credentials/
+tmp/
+.vscode/
+.DS_Store
