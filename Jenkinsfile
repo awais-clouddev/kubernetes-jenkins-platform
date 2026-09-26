@@ -5,7 +5,9 @@ node('k8s-build-agent') {
         try {
 
             stage('Checkout') {
-                checkout scm
+                def scmVars = checkout scm
+                env.GIT_COMMIT = scmVars.GIT_COMMIT
+                echo "Checked out commit: ${env.GIT_COMMIT}"
             }
 
             stage('Validation') {
