@@ -28,7 +28,8 @@ node('k8s-build-agent') {
                     sh '''
                         python -m venv .venv
                         . .venv/bin/activate
-                        pip install --quiet -r api/requirements.txt pytest httpx
+                        pip install --quiet -r api/requirements.txt httpx
+                        pip install --quiet --upgrade "pytest>=8.3,<9"
                         PYTHONPATH=api pytest -q api/tests
                     '''
                 }
