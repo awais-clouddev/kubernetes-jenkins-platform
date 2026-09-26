@@ -1,0 +1,85 @@
+Started by user Jenkins Admin
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Still waiting to schedule task
+‘build-agent-xc0td’ is offline
+Agent build-agent-1555k is provisioned from template build-agent
+---
+apiVersion: "v1"
+kind: "Pod"
+metadata:
+  annotations:
+    kubernetes.jenkins.io/last-refresh: "1790355568186"
+  labels:
+    jenkins/jenkins-jenkins-agent: "true"
+    jenkins/label-digest: "27ea1dace72db0d4c6628d13ae473329d9fed7b0"
+    jenkins/label: "jenkins-jenkins-agent_k8s-build-agent"
+    kubernetes.jenkins.io/controller: "http___jenkins_jenkins_svc_cluster_local_8080x"
+  name: "build-agent-1555k"
+  namespace: "ci-build-agents"
+spec:
+  containers:
+  - args:
+    - "********"
+    - "build-agent-1555k"
+    env:
+    - name: "JENKINS_SECRET"
+      value: "********"
+    - name: "JENKINS_TUNNEL"
+      value: "jenkins-agent.jenkins.svc.cluster.local:50000"
+    - name: "JENKINS_AGENT_NAME"
+      value: "build-agent-1555k"
+    - name: "REMOTING_OPTS"
+      value: "-noReconnectAfter 1d"
+    - name: "JENKINS_NAME"
+      value: "build-agent-1555k"
+    - name: "JENKINS_AGENT_WORKDIR"
+      value: "/home/jenkins/agent"
+    - name: "JENKINS_URL"
+      value: "http://jenkins.jenkins.svc.cluster.local:8080"
+    image: "jenkins/inbound-agent:3384.v60d89463d9e0-1"
+    imagePullPolicy: "IfNotPresent"
+    name: "jnlp"
+    resources:
+      limits:
+        memory: "512Mi"
+        cpu: "512m"
+      requests:
+        memory: "512Mi"
+        cpu: "512m"
+    tty: false
+    volumeMounts:
+    - mountPath: "/home/jenkins/agent"
+      name: "workspace-volume"
+      readOnly: false
+    workingDir: "/home/jenkins/agent"
+  nodeSelector:
+    workload: "ci"
+  restartPolicy: "Never"
+  serviceAccountName: "default"
+  tolerations:
+  - effect: "NoSchedule"
+    key: "dedicated"
+    operator: "Equal"
+    value: "ci"
+  volumes:
+  - emptyDir:
+      medium: ""
+    name: "workspace-volume"
+
+Running on build-agent-1555k in /home/jenkins/agent/workspace/k8s-agent-smoke-test
+[Pipeline] {
+[Pipeline] echo
+Kubernetes dynamic agent test
+[Pipeline] sh
++ echo HOSTNAME=build-agent-1555k
+HOSTNAME=build-agent-1555k
+[Pipeline] sh
++ pwd
+/home/jenkins/agent/workspace/k8s-agent-smoke-test
+[Pipeline] sh
++ sleep 30
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+Finished: SUCCESS

@@ -1,0 +1,125 @@
+controller:
+  numExecutors: 0
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "3Gi"
+
+  installPlugins:
+    - kubernetes:4538.v5b_ce7f35b_257
+    - workflow-aggregator:608.v67378e9d3db_1
+    - git:5.10.1
+    - configuration-as-code:2103.vd6f93c3e714a_
+    - prometheus:860.v532442b_44e9a_
+    - job-dsl:3732.v9a_c49a_61a_313
+
+  installLatestPlugins: false
+
+  JCasC:
+    defaultConfig: true
+    configScripts:
+      project-config: |
+        jenkins:
+          systemMessage: "Kubernetes Jenkins Platform"
+
+persistence:
+  enabled: true
+  storageClass: standard
+  size: 8Gi
+
+serviceAccount:
+  create: true
+  name: jenkins-controller
+
+agent:
+  namespace: ci-build-agents
+  jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+  jenkinsTunnel: "jenkins-agent.jenkins.svc.cluster.local:50000"
+  podName: "build-agent"
+  serviceAccount: "jenkins-build-agent"
+  customJenkinsLabels:
+    - "k8s-build-agent"
+  nodeSelector:
+    workload: ci
+  yamlTemplate: |-
+    apiVersion: v1
+    kind: Pod
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: jnlp
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+        - name: python
+          image: python:3.13-slim
+          command:
+            - sh
+            - -c
+            - sleep 86400
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+        - name: buildctl
+          image: moby/buildkit:v0.33.0-rootless
+          command:
+            - sh
+            - -c
+            - sleep 86400
+          env:
+            - name: BUILDKIT_HOST
+              value: tcp://buildkitd.buildkit-system.svc.cluster.local:1234
+            - name: BUILDKIT_TLS_CACERT
+              value: /certs/ca.crt
+            - name: BUILDKIT_TLS_CERT
+              value: /certs/tls.crt
+            - name: BUILDKIT_TLS_KEY
+              value: /certs/tls.key
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: buildkit-client-tls
+              mountPath: /certs
+              readOnly: true
+      volumes:
+        - name: buildkit-client-tls
+          secret:
+            secretName: buildkit-client-tls
+      tolerations:
+        - key: dedicated
+          operator: Equal
+          value: ci
+          effect: NoSchedule
+
+additionalClouds:
+  deploy-cloud:
+    agent:
+      namespace: ci-deploy-agents
+      podName: "deploy-agent"
+      serviceAccount: "default"
+      customJenkinsLabels:
+        - "k8s-deploy-agent"
+      nodeSelector:
+        workload: application
+      yamlTemplate: |-
+        apiVersion: v1
+        kind: Pod
+        spec: {}

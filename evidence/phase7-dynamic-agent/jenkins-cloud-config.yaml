@@ -1,0 +1,126 @@
+  clouds:
+  - kubernetes:
+      containerCapStr: "10"
+      defaultsProviderTemplate: ""
+      connectTimeout: "5"
+      readTimeout: "15"
+      jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+      jenkinsTunnel: "jenkins-agent.jenkins.svc.cluster.local:50000"
+      skipTlsVerify: false
+      usageRestricted: false
+      maxRequestsPerHostStr: "32"
+      retentionTimeout: "5"
+      waitForPodSec: "600"
+      name: "kubernetes"
+      namespace: "ci-build-agents"
+      restrictedPssSecurityContext: false
+      serverUrl: "https://kubernetes.default"
+      addMasterProxyEnvVars: false
+      credentialsId: ""
+      podLabels:
+      - key: "jenkins/jenkins-jenkins-agent"
+        value: "true"
+      templates:
+        - name: "build-agent"
+          namespace: "ci-build-agents"
+          id: ce1c07ac35a4c586343ad5ca0b15eb4a800425f0c511f9449dc5e83416f5e7bd
+          containers:
+          - name: "jnlp"
+            alwaysPullImage: false
+            args: "^${computer.jnlpmac} ^${computer.name}"
+            envVars:
+              - envVar:
+                  key: "JENKINS_URL"
+                  value: http://jenkins.jenkins.svc.cluster.local:8080
+            image: "jenkins/inbound-agent:3384.v60d89463d9e0-1"
+            privileged: "false"
+            resourceLimitCpu: 512m
+            resourceLimitMemory: 512Mi
+            resourceRequestCpu: 512m
+            resourceRequestMemory: 512Mi
+            ttyEnabled: false
+            workingDir: /home/jenkins/agent
+          idleMinutes: 0
+          instanceCap: 2147483647
+          label: "jenkins-jenkins-agent k8s-build-agent"
+          nodeSelector: workload=ci
+          nodeUsageMode: "NORMAL"
+          podRetention: Never
+          showRawYaml: true
+          serviceAccount: "default"
+          slaveConnectTimeoutStr: "100"
+          yaml: |-
+            apiVersion: v1
+            kind: Pod
+            spec:
+              tolerations:
+                - key: dedicated
+                  operator: Equal
+                  value: ci
+                  effect: NoSchedule
+          yamlMergeStrategy: override
+          inheritYamlMergeStrategy: false
+  - kubernetes:
+      containerCapStr: "10"
+      defaultsProviderTemplate: ""
+      connectTimeout: "5"
+      readTimeout: "15"
+      jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+      jenkinsTunnel: "jenkins-agent.jenkins.svc.cluster.local:50000"
+      skipTlsVerify: false
+      usageRestricted: false
+      maxRequestsPerHostStr: "32"
+      retentionTimeout: "5"
+      waitForPodSec: "600"
+      name: "deploy-cloud"
+      namespace: "ci-deploy-agents"
+      restrictedPssSecurityContext: false
+      serverUrl: "https://kubernetes.default"
+      credentialsId: ""
+      podLabels:
+      - key: "jenkins/jenkins-jenkins-agent"
+        value: "true"
+      templates:
+        - name: "deploy-agent"
+          namespace: "ci-deploy-agents"
+          id: 5e9d77acd1939bf088b6a0cbcd620c43296401bbc16809c5d24de99725bafe7f
+          containers:
+          - name: "jnlp"
+            alwaysPullImage: false
+            args: "^${computer.jnlpmac} ^${computer.name}"
+            envVars:
+              - envVar:
+                  key: "JENKINS_URL"
+                  value: http://jenkins.jenkins.svc.cluster.local:8080
+            image: "jenkins/inbound-agent:3384.v60d89463d9e0-1"
+            privileged: "false"
+            resourceLimitCpu: 512m
+            resourceLimitMemory: 512Mi
+            resourceRequestCpu: 512m
+            resourceRequestMemory: 512Mi
+            ttyEnabled: false
+            workingDir: /home/jenkins/agent
+          idleMinutes: 0
+          instanceCap: 2147483647
+          label: "jenkins-jenkins-agent k8s-deploy-agent"
+          nodeSelector: workload=application
+          nodeUsageMode: "NORMAL"
+          podRetention: Never
+          showRawYaml: true
+          serviceAccount: "default"
+          slaveConnectTimeoutStr: "100"
+          yaml: |-
+            apiVersion: v1
+            kind: Pod
+            spec: {}
+          yamlMergeStrategy: override
+          inheritYamlMergeStrategy: false
+  slaveAgentPort: 50000
+security:
+  apiToken:
+    creationOfLegacyTokenEnabled: false
+    tokenGenerationOnCreationEnabled: false
+    usageStatisticsEnabled: true
+unclassified:
+  location:
+    url: http://jenkins:8080

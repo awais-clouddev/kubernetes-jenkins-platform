@@ -1,0 +1,13 @@
+LAST SEEN   TYPE     REASON      OBJECT                  MESSAGE
+5m25s       Normal   Scheduled   pod/build-agent-xc0td   Successfully assigned ci-build-agents/build-agent-xc0td to kubernetes-jenkins-platform-worker3
+5m25s       Normal   Pulling     pod/build-agent-xc0td   Pulling image "jenkins/inbound-agent:3384.v60d89463d9e0-1"
+3m43s       Normal   Scheduled   pod/build-agent-1555k   Successfully assigned ci-build-agents/build-agent-1555k to kubernetes-jenkins-platform-worker3
+3m43s       Normal   Pulling     pod/build-agent-1555k   Pulling image "jenkins/inbound-agent:3384.v60d89463d9e0-1"
+2m21s       Normal   Pulled      pod/build-agent-xc0td   Successfully pulled image "jenkins/inbound-agent:3384.v60d89463d9e0-1" in 3m3.594s (3m3.594s including waiting). Image size: 151277090 bytes.
+2m21s       Normal   Created     pod/build-agent-xc0td   Container created
+2m21s       Normal   Started     pod/build-agent-xc0td   Container started
+2m21s       Normal   Killing     pod/build-agent-xc0td   Stopping container jnlp
+2m19s       Normal   Pulled      pod/build-agent-1555k   Successfully pulled image "jenkins/inbound-agent:3384.v60d89463d9e0-1" in 2.122s (1m23.573s including waiting). Image size: 151277090 bytes.
+2m19s       Normal   Created     pod/build-agent-1555k   Container created
+2m19s       Normal   Started     pod/build-agent-1555k   Container started
+96s         Normal   Killing     pod/build-agent-1555k   Stopping container jnlp
