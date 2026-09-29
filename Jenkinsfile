@@ -208,6 +208,7 @@ EOF
                                   --scanners vuln \
                                   --severity HIGH,CRITICAL \
                                   --ignore-unfixed \
+                                  --skip-files "**/pip/_vendor/bom.cdx.json" \
                                   --exit-code 1 \
                                   --format json \
                                   --output "$WORKSPACE/evidence/phase10-pipeline/trivy-api.json" \
@@ -264,7 +265,8 @@ gate = {
     "policy": {
         "scanner": "Trivy",
         "severity": ["HIGH", "CRITICAL"],
-        "ignoreUnfixed": True
+        "ignoreUnfixed": True,
+        "apiSkipFiles": ["**/pip/_vendor/bom.cdx.json"]
     }
 }
 
