@@ -57,25 +57,96 @@ node('k8s-build-agent') {
 
                             mkdir -p "$WORKSPACE/.docker" "$WORKSPACE/evidence/phase10-pipeline"
 
+                            cleanup_registry_auth() {
+                                rm -f "$WORKSPACE/.docker/config.json"
+                                rmdir "$WORKSPACE/.docker" 2>/dev/null || true
+                            }
+
+                            trap cleanup_registry_auth EXIT
+
                             cat > "$WORKSPACE/.docker/config.json" <<EOF
 {"auths":{"ghcr.io":{"username":"${GHCR_USERNAME}","password":"${GHCR_TOKEN}"}}}
 EOF
 
                             chmod 600 "$WORKSPACE/.docker/config.json"
-
                             export DOCKER_CONFIG="$WORKSPACE/.docker"
 
-                            buildctl                               --addr "$BUILDKIT_HOST"                               --tlscacert "$BUILDKIT_TLS_CACERT"                               --tlscert "$BUILDKIT_TLS_CERT"                               --tlskey "$BUILDKIT_TLS_KEY"                               build                               --frontend dockerfile.v0                               --local context=frontend                               --local dockerfile=frontend                               --output type=image,name=ghcr.io/awais-clouddev/kubernetes-jenkins-platform-frontend:${GIT_COMMIT},push=true                               --metadata-file "$WORKSPACE/evidence/phase10-pipeline/frontend-metadata.json"
+                            buildctl \
+                              --addr "$BUILDKIT_HOST" \
+                              --tlscacert "$BUILDKIT_TLS_CACERT" \
+                              --tlscert "$BUILDKIT_TLS_CERT" \
+                              --tlskey "$BUILDKIT_TLS_KEY" \
+                              build \
+                              --frontend dockerfile.v0 \
+                              --local context=frontend \
+                              --local dockerfile=frontend \
+                              --output type=image,name=ghcr.io/awais-clouddev/kubernetes-jenkins-platform-frontend:${GIT_COMMIT},push=true \
+                              --metadata-file "$WORKSPACE/evidence/phase10-pipeline/frontend-metadata.json"
 
-                            buildctl                               --addr "$BUILDKIT_HOST"                               --tlscacert "$BUILDKIT_TLS_CACERT"                               --tlscert "$BUILDKIT_TLS_CERT"                               --tlskey "$BUILDKIT_TLS_KEY"                               build                               --frontend dockerfile.v0                               --local context=api                               --local dockerfile=api                               --output type=image,name=ghcr.io/awais-clouddev/kubernetes-jenkins-platform-api:${GIT_COMMIT},push=true                               --metadata-file "$WORKSPACE/evidence/phase10-pipeline/api-metadata.json"
-
-                            rm -f "$WORKSPACE/.docker/config.json"
-                            rmdir "$WORKSPACE/.docker" 2>/dev/null || true
+                            buildctl \
+                              --addr "$BUILDKIT_HOST" \
+                              --tlscacert "$BUILDKIT_TLS_CACERT" \
+                              --tlscert "$BUILDKIT_TLS_CERT" \
+                              --tlskey "$BUILDKIT_TLS_KEY" \
+                              build \
+                              --frontend dockerfile.v0 \
+                              --local context=api \
+                              --local dockerfile=api \
+                              --output type=image,name=ghcr.io/awais-clouddev/kubernetes-jenkins-platform-api:${GIT_COMMIT},push=true \
+                              --metadata-file "$WORKSPACE/evidence/phase10-pipeline/api-metadata.json"
 
                             echo "BUILDKIT_GHCR_PUSH_COMPLETE"
                         '''
                     }
                 }
+
+                container('python') {
+                    env.FRONTEND_DIGEST = sh(
+                        script: '''
+                            python -c 'import json; print(json.load(open("evidence/phase10-pipeline/frontend-metadata.json"))["containerimage.digest"])'
+                        ''',
+                        returnStdout: true
+                    ).trim()
+
+                    env.API_DIGEST = sh(
+                        script: '''
+                            python -c 'import json; print(json.load(open("evidence/phase10-pipeline/api-metadata.json"))["containerimage.digest"])'
+                        ''',
+                        returnStdout: true
+                    ).trim()
+                }
+
+                if (!(env.FRONTEND_DIGEST ==~ /^sha256:[0-9a-f]{64}$/)) {
+                    error("Invalid frontend image digest: ${env.FRONTEND_DIGEST}")
+                }
+
+                if (!(env.API_DIGEST ==~ /^sha256:[0-9a-f]{64}$/)) {
+                    error("Invalid API image digest: ${env.API_DIGEST}")
+                }
+
+                writeFile(
+                    file: 'evidence/phase10-pipeline/frontend-digest.txt',
+                    text: "${env.FRONTEND_DIGEST}\n"
+                )
+
+                writeFile(
+                    file: 'evidence/phase10-pipeline/api-digest.txt',
+                    text: "${env.API_DIGEST}\n"
+                )
+
+                writeFile(
+                    file: 'evidence/phase10-pipeline/source-git-sha.txt',
+                    text: "${env.GIT_COMMIT}\n"
+                )
+
+                echo "PIPELINE_OUTPUT_GIT_SHA=${env.GIT_COMMIT}"
+                echo "PIPELINE_OUTPUT_FRONTEND_DIGEST=${env.FRONTEND_DIGEST}"
+                echo "PIPELINE_OUTPUT_API_DIGEST=${env.API_DIGEST}"
+
+                archiveArtifacts(
+                    artifacts: 'evidence/phase10-pipeline/**',
+                    fingerprint: true
+                )
             }
 
         } finally {
