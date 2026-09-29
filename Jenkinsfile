@@ -150,74 +150,116 @@ EOF
             }
 
             stage('Security Scan - Trivy') {
+                def frontendScanStatus = 0
+                def apiScanStatus = 0
+
                 withCredentials([usernamePassword(
                     credentialsId: 'ghcr-credentials',
                     usernameVariable: 'TRIVY_USERNAME',
                     passwordVariable: 'TRIVY_PASSWORD'
                 )]) {
                     container('trivy') {
+
                         sh '''
                             set +x
 
                             mkdir -p \
                               "$WORKSPACE/evidence/phase10-pipeline" \
                               "$TRIVY_CACHE_DIR"
-
-                            FRONTEND_IMAGE="ghcr.io/awais-clouddev/kubernetes-jenkins-platform-frontend@${FRONTEND_DIGEST}"
-                            API_IMAGE="ghcr.io/awais-clouddev/kubernetes-jenkins-platform-api@${API_DIGEST}"
-
-                            echo "TRIVY_FRONTEND_SCAN_START=${FRONTEND_IMAGE}"
-
-                            trivy image \
-                              --cache-dir "$TRIVY_CACHE_DIR" \
-                              --scanners vuln \
-                              --severity HIGH,CRITICAL \
-                              --ignore-unfixed \
-                              --exit-code 1 \
-                              --format json \
-                              --output "$WORKSPACE/evidence/phase10-pipeline/trivy-frontend.json" \
-                              "$FRONTEND_IMAGE"
-
-                            echo "TRIVY_FRONTEND_SCAN_PASS=${FRONTEND_DIGEST}"
-
-                            echo "TRIVY_API_SCAN_START=${API_IMAGE}"
-
-                            trivy image \
-                              --cache-dir "$TRIVY_CACHE_DIR" \
-                              --scanners vuln \
-                              --severity HIGH,CRITICAL \
-                              --ignore-unfixed \
-                              --exit-code 1 \
-                              --format json \
-                              --output "$WORKSPACE/evidence/phase10-pipeline/trivy-api.json" \
-                              "$API_IMAGE"
-
-                            echo "TRIVY_API_SCAN_PASS=${API_DIGEST}"
                         '''
+
+                        frontendScanStatus = sh(
+                            script: '''
+                                set +x
+
+                                FRONTEND_IMAGE="ghcr.io/awais-clouddev/kubernetes-jenkins-platform-frontend@${FRONTEND_DIGEST}"
+
+                                echo "TRIVY_FRONTEND_SCAN_START=${FRONTEND_IMAGE}"
+
+                                trivy image \
+                                  --cache-dir "$TRIVY_CACHE_DIR" \
+                                  --scanners vuln \
+                                  --severity HIGH,CRITICAL \
+                                  --ignore-unfixed \
+                                  --exit-code 1 \
+                                  --format json \
+                                  --output "$WORKSPACE/evidence/phase10-pipeline/trivy-frontend.json" \
+                                  "$FRONTEND_IMAGE"
+                            ''',
+                            returnStatus: true
+                        )
+
+                        if (frontendScanStatus == 0) {
+                            echo "TRIVY_FRONTEND_SCAN_PASS=${env.FRONTEND_DIGEST}"
+                        } else {
+                            echo "TRIVY_FRONTEND_SCAN_FAIL=${env.FRONTEND_DIGEST}"
+                        }
+
+                        apiScanStatus = sh(
+                            script: '''
+                                set +x
+
+                                API_IMAGE="ghcr.io/awais-clouddev/kubernetes-jenkins-platform-api@${API_DIGEST}"
+
+                                echo "TRIVY_API_SCAN_START=${API_IMAGE}"
+
+                                trivy image \
+                                  --cache-dir "$TRIVY_CACHE_DIR" \
+                                  --scanners vuln \
+                                  --severity HIGH,CRITICAL \
+                                  --ignore-unfixed \
+                                  --exit-code 1 \
+                                  --format json \
+                                  --output "$WORKSPACE/evidence/phase10-pipeline/trivy-api.json" \
+                                  "$API_IMAGE"
+                            ''',
+                            returnStatus: true
+                        )
+
+                        if (apiScanStatus == 0) {
+                            echo "TRIVY_API_SCAN_PASS=${env.API_DIGEST}"
+                        } else {
+                            echo "TRIVY_API_SCAN_FAIL=${env.API_DIGEST}"
+                        }
                     }
                 }
 
-                container('python') {
-                    sh '''
-                        python - <<'PY2'
+                withEnv([
+                    "FRONTEND_SCAN_STATUS=${frontendScanStatus}",
+                    "API_SCAN_STATUS=${apiScanStatus}"
+                ]) {
+                    container('python') {
+                        sh '''
+                            python - <<'PY2'
 import json
 import os
 from pathlib import Path
 
 evidence = Path("evidence/phase10-pipeline")
+evidence.mkdir(parents=True, exist_ok=True)
 
-metadata = {
-    "deployEligible": True,
+frontend_status = int(os.environ["FRONTEND_SCAN_STATUS"])
+api_status = int(os.environ["API_SCAN_STATUS"])
+
+deploy_eligible = (
+    frontend_status == 0 and
+    api_status == 0
+)
+
+gate = {
+    "deployEligible": deploy_eligible,
     "gitSha": os.environ["GIT_COMMIT"],
     "frontend": {
         "image": "ghcr.io/awais-clouddev/kubernetes-jenkins-platform-frontend",
         "digest": os.environ["FRONTEND_DIGEST"],
-        "trivyGate": "PASS"
+        "trivyGate": "PASS" if frontend_status == 0 else "FAIL",
+        "scanExitCode": frontend_status
     },
     "api": {
         "image": "ghcr.io/awais-clouddev/kubernetes-jenkins-platform-api",
         "digest": os.environ["API_DIGEST"],
-        "trivyGate": "PASS"
+        "trivyGate": "PASS" if api_status == 0 else "FAIL",
+        "scanExitCode": api_status
     },
     "policy": {
         "scanner": "Trivy",
@@ -226,23 +268,41 @@ metadata = {
     }
 }
 
-(evidence / "deploy-eligible.json").write_text(
-    json.dumps(metadata, indent=2) + "\\n"
+(evidence / "trivy-gate.json").write_text(
+    json.dumps(gate, indent=2) + "\\n"
 )
+
+deploy_file = evidence / "deploy-eligible.json"
+
+if deploy_eligible:
+    deploy_file.write_text(
+        json.dumps(gate, indent=2) + "\\n"
+    )
+elif deploy_file.exists():
+    deploy_file.unlink()
 PY2
-                    '''
+                        '''
+                    }
                 }
 
-                echo "PIPELINE_OUTPUT_DEPLOY_ELIGIBLE=true"
-                echo "DEPLOY_ELIGIBLE_FRONTEND_DIGEST=${env.FRONTEND_DIGEST}"
-                echo "DEPLOY_ELIGIBLE_API_DIGEST=${env.API_DIGEST}"
+                echo "TRIVY_FRONTEND_EXIT_CODE=${frontendScanStatus}"
+                echo "TRIVY_API_EXIT_CODE=${apiScanStatus}"
 
                 archiveArtifacts(
                     artifacts: 'evidence/phase10-pipeline/**',
                     fingerprint: true
                 )
-            }
 
+                if (frontendScanStatus != 0 || apiScanStatus != 0) {
+                    error(
+                        "Trivy security gate failed: frontend=${frontendScanStatus}, api=${apiScanStatus}"
+                    )
+                }
+
+                echo "PIPELINE_OUTPUT_DEPLOY_ELIGIBLE=true"
+                echo "DEPLOY_ELIGIBLE_FRONTEND_DIGEST=${env.FRONTEND_DIGEST}"
+                echo "DEPLOY_ELIGIBLE_API_DIGEST=${env.API_DIGEST}"
+            }
 
         } finally {
             deleteDir()
