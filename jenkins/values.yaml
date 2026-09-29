@@ -75,6 +75,21 @@ agent:
             capabilities:
               drop:
                 - ALL
+        - name: trivy
+          image: ghcr.io/aquasecurity/trivy:0.74.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - sleep 86400
+          env:
+            - name: TRIVY_CACHE_DIR
+              value: /tmp/trivy-cache
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
         - name: buildctl
           image: moby/buildkit:v0.33.0-rootless
           command:
