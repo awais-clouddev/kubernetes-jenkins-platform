@@ -1,0 +1,7 @@
+environment: staging
+
+frontend:
+  replicaCount: 2
+
+api:
+  replicaCount: 2

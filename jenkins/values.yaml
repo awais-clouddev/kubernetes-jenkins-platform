@@ -1,6 +1,10 @@
 controller:
   numExecutors: 0
 
+  initContainerEnv:
+    - name: JAVA_TOOL_OPTIONS
+      value: "-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false"
+
   resources:
     requests:
       cpu: "500m"
@@ -125,16 +129,109 @@ agent:
           effect: NoSchedule
 
 additionalClouds:
-  deploy-cloud:
+  staging-deploy-cloud:
     agent:
+      restrictedPssSecurityContext: true
       namespace: ci-deploy-agents
-      podName: "deploy-agent"
-      serviceAccount: "default"
+      podName: "staging-deploy-agent"
+      serviceAccount: "staging-deployer"
+      podRetention: "Never"
       customJenkinsLabels:
-        - "k8s-deploy-agent"
+        - "k8s-staging-deploy-agent"
       nodeSelector:
-        workload: application
+        workload: ci
       yamlTemplate: |-
         apiVersion: v1
         kind: Pod
-        spec: {}
+        spec:
+          automountServiceAccountToken: true
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: deploy-tools
+              image: jenkins/inbound-agent:3384.v60d89463d9e0-1
+              imagePullPolicy: IfNotPresent
+              command:
+                - sh
+                - -c
+                - sleep 86400
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                runAsGroup: 1000
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                seccompProfile:
+                  type: RuntimeDefault
+          tolerations:
+            - key: dedicated
+              operator: Equal
+              value: ci
+              effect: NoSchedule
+
+  production-deploy-cloud:
+    agent:
+      restrictedPssSecurityContext: true
+      namespace: ci-deploy-agents
+      podName: "production-deploy-agent"
+      serviceAccount: "production-deployer"
+      customJenkinsLabels:
+        - "k8s-production-deploy-agent"
+      nodeSelector:
+        workload: ci
+      yamlTemplate: |-
+        apiVersion: v1
+        kind: Pod
+        spec:
+          automountServiceAccountToken: true
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: deploy-tools
+              image: jenkins/inbound-agent:3384.v60d89463d9e0-1
+              imagePullPolicy: IfNotPresent
+              command:
+                - sh
+                - -c
+                - sleep 86400
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                runAsGroup: 1000
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                seccompProfile:
+                  type: RuntimeDefault
+          tolerations:
+            - key: dedicated
+              operator: Equal
+              value: ci
+              effect: NoSchedule

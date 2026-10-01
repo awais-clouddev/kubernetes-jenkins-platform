@@ -1,0 +1,48 @@
+imagePullSecrets:
+  - name: ghcr-pull
+
+frontend:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/awais-clouddev/kubernetes-jenkins-platform-frontend
+    digest: sha256:dac961f7f5b26fa2610e05865dc18cdb3c95ddc665c4ca78133609f4c4996a5e
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+
+api:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/awais-clouddev/kubernetes-jenkins-platform-api
+    digest: sha256:4e77abc94de46a35a7d9ddcc4ceee2dfed08fae2a0497353ccdd414a1a8effea
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+postgresql:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  enabled: true
+
+redis:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+  enabled: true

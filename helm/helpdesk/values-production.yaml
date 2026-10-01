@@ -1,0 +1,7 @@
+environment: production
+
+frontend:
+  replicaCount: 3
+
+api:
+  replicaCount: 3

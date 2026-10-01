@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helpdesk-api
+  labels:
+    app: helpdesk-api
+spec:
+  replicas: {{ .Values.api.replicaCount }}
+  selector:
+    matchLabels:
+      app: helpdesk-api
+  template:
+    metadata:
+      labels:
+        app: helpdesk-api
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        workload: application
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 8 }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: helpdesk-api
+      containers:
+        - name: api
+          image: "{{ .Values.api.image.repository }}@{{ .Values.api.image.digest }}"
+          resources:
+{{ toYaml .Values.api.resources | indent 12 }}
+          envFrom:
+            - configMapRef:
+                name: helpdesk-app-config
+            - secretRef:
+                name: helpdesk-runtime
+          ports:
+            - name: http
+              containerPort: 8000
+          startupProbe:
+            tcpSocket:
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
