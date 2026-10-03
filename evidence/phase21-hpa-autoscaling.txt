@@ -1,0 +1,45 @@
+===== PROJECT 6 HPA EVIDENCE =====
+
+===== HPA =====
+NAME           REFERENCE                 TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+helpdesk-api   Deployment/helpdesk-api   cpu: 4%/50%   2         5         2          12m
+
+===== HPA DETAILS =====
+Name:                                                  helpdesk-api
+Namespace:                                             helpdesk-staging
+Labels:                                                app.kubernetes.io/managed-by=Helm
+Annotations:                                           meta.helm.sh/release-name: helpdesk-staging
+                                                       meta.helm.sh/release-namespace: helpdesk-staging
+CreationTimestamp:                                     Sat, 03 Oct 2026 19:10:01 +0500
+Reference:                                             Deployment/helpdesk-api
+Metrics:                                               ( current / target )
+  resource cpu on pods  (as a percentage of request):  4% (4m) / 50%
+Min replicas:                                          2
+Max replicas:                                          5
+Deployment pods:                                       2 current / 2 desired
+Conditions:
+  Type            Status  Reason            Message
+  ----            ------  ------            -------
+  AbleToScale     True    ReadyForNewScale  recommended size matches current size
+  ScaledToZero    False   NotScaledToZero   the HPA controller did not scale the workload to zero
+  ScalingActive   True    ValidMetricFound  the HPA was able to successfully calculate a replica count from cpu resource utilization (percentage of request)
+  ScalingLimited  True    TooFewReplicas    the desired replica count is less than the minimum replica count
+Events:
+  Type    Reason             Age    From                       Message
+  ----    ------             ----   ----                       -------
+  Normal  SuccessfulRescale  12m    horizontal-pod-autoscaler  New size: 2; reason: Current number of replicas below Spec.MinReplicas
+  Normal  SuccessfulRescale  10m    horizontal-pod-autoscaler  New size: 3; reason: Current number of replicas below Spec.MinReplicas
+  Normal  SuccessfulRescale  7m36s  horizontal-pod-autoscaler  New size: 5; reason: cpu resource utilization (percentage of request) above target
+  Normal  SuccessfulRescale  96s    horizontal-pod-autoscaler  New size: 2; reason: All metrics below target
+
+===== API DEPLOYMENT =====
+NAME           READY   UP-TO-DATE   AVAILABLE   AGE
+helpdesk-api   2/2     2            2           3d6h
+
+===== API PODS =====
+NAME                          READY   STATUS    RESTARTS   AGE
+helpdesk-api-cd98db7f-98b69   1/1     Running   0          12m
+helpdesk-api-cd98db7f-td6p7   1/1     Running   0          7m36s
+
+===== API RESOURCE REQUESTS =====
+api requests={"cpu":"100m","memory":"128Mi"} limits={"cpu":"500m","memory":"256Mi"}

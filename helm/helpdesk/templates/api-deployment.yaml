@@ -5,7 +5,9 @@ metadata:
   labels:
     app: helpdesk-api
 spec:
+{{- if not .Values.api.autoscaling.enabled }}
   replicas: {{ .Values.api.replicaCount }}
+{{- end }}
   selector:
     matchLabels:
       app: helpdesk-api

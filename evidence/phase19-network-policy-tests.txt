@@ -1,0 +1,26 @@
+
+==========================================
+302 RANDOM POD -> POSTGRES : EXPECT DENIED
+==========================================
+error: unable to upgrade connection: container not found ("test")
+
+============================================
+303 FRONTEND -> POSTGRES : EXPECT DENIED
+============================================
+error: unable to upgrade connection: container not found ("test")
+
+==========================================
+304 API -> POSTGRES : EXPECT SUCCESS
+==========================================
+PASS: CONNECTED
+
+==========================================
+305 API -> REDIS : EXPECT SUCCESS
+==========================================
+PASS: CONNECTED
+
+==========================================
+306 DNS : EXPECT SUCCESS
+==========================================
+PASS: DNS RESOLVED
+('kubernetes.default.svc.cluster.local', [], ['10.96.0.1'])

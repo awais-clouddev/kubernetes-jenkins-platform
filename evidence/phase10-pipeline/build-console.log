@@ -1,0 +1,233 @@
+Started by user Jenkins Admin
+Obtained Jenkinsfile from git https://github.com/awais-clouddev/kubernetes-jenkins-platform.git
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Agent build-agent-zxbth is provisioned from template build-agent
+---
+apiVersion: "v1"
+kind: "Pod"
+metadata:
+  annotations:
+    kubernetes.jenkins.io/last-refresh: "1790411708734"
+  labels:
+    jenkins/jenkins-jenkins-agent: "true"
+    jenkins/label-digest: "27ea1dace72db0d4c6628d13ae473329d9fed7b0"
+    jenkins/label: "jenkins-jenkins-agent_k8s-build-agent"
+    kubernetes.jenkins.io/controller: "http___jenkins_jenkins_svc_cluster_local_8080x"
+  name: "build-agent-zxbth"
+  namespace: "ci-build-agents"
+spec:
+  automountServiceAccountToken: false
+  containers:
+  - args:
+    - "********"
+    - "build-agent-zxbth"
+    env:
+    - name: "JENKINS_SECRET"
+      value: "********"
+    - name: "JENKINS_TUNNEL"
+      value: "jenkins-agent.jenkins.svc.cluster.local:50000"
+    - name: "JENKINS_AGENT_NAME"
+      value: "build-agent-zxbth"
+    - name: "REMOTING_OPTS"
+      value: "-noReconnectAfter 1d"
+    - name: "JENKINS_NAME"
+      value: "build-agent-zxbth"
+    - name: "JENKINS_AGENT_WORKDIR"
+      value: "/home/jenkins/agent"
+    - name: "JENKINS_URL"
+      value: "http://jenkins.jenkins.svc.cluster.local:8080"
+    image: "jenkins/inbound-agent:3384.v60d89463d9e0-1"
+    imagePullPolicy: "IfNotPresent"
+    name: "jnlp"
+    resources:
+      limits:
+        memory: "512Mi"
+        cpu: "512m"
+      requests:
+        memory: "512Mi"
+        cpu: "512m"
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - "ALL"
+    tty: false
+    volumeMounts:
+    - mountPath: "/home/jenkins/agent"
+      name: "workspace-volume"
+      readOnly: false
+    workingDir: "/home/jenkins/agent"
+  - command:
+    - "sh"
+    - "-c"
+    - "sleep 86400"
+    image: "python:3.13-slim"
+    name: "python"
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - "ALL"
+    volumeMounts:
+    - mountPath: "/home/jenkins/agent"
+      name: "workspace-volume"
+      readOnly: false
+    workingDir: "/home/jenkins/agent"
+  - command:
+    - "sh"
+    - "-c"
+    - "sleep 86400"
+    env:
+    - name: "BUILDKIT_HOST"
+      value: "tcp://buildkitd.buildkit-system.svc.cluster.local:1234"
+    - name: "BUILDKIT_TLS_CACERT"
+      value: "/certs/ca.crt"
+    - name: "BUILDKIT_TLS_CERT"
+      value: "/certs/tls.crt"
+    - name: "BUILDKIT_TLS_KEY"
+      value: "/certs/tls.key"
+    image: "moby/buildkit:v0.33.0-rootless"
+    name: "buildctl"
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - "ALL"
+    volumeMounts:
+    - mountPath: "/certs"
+      name: "buildkit-client-tls"
+      readOnly: true
+    - mountPath: "/home/jenkins/agent"
+      name: "workspace-volume"
+      readOnly: false
+    workingDir: "/home/jenkins/agent"
+  nodeSelector:
+    workload: "ci"
+  restartPolicy: "Never"
+  securityContext:
+    fsGroup: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: "RuntimeDefault"
+  serviceAccountName: "jenkins-build-agent"
+  tolerations:
+  - effect: "NoSchedule"
+    key: "dedicated"
+    operator: "Equal"
+    value: "ci"
+  volumes:
+  - name: "buildkit-client-tls"
+    secret:
+      secretName: "buildkit-client-tls"
+  - emptyDir:
+      medium: ""
+    name: "workspace-volume"
+
+Running on build-agent-zxbth in /home/jenkins/agent/workspace/project6-ci-pipeline
+[Pipeline] {
+[Pipeline] timeout
+Timeout set to expire in 30 min
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Checkout)
+[Pipeline] checkout
+Selected Git installation does not exist. Using Default
+The recommended git tool is: NONE
+No credentials specified
+Cloning the remote Git repository
+Cloning repository https://github.com/awais-clouddev/kubernetes-jenkins-platform.git
+ > git init /home/jenkins/agent/workspace/project6-ci-pipeline # timeout=10
+Fetching upstream changes from https://github.com/awais-clouddev/kubernetes-jenkins-platform.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.47.3'
+ > git fetch --tags --force --progress -- https://github.com/awais-clouddev/kubernetes-jenkins-platform.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git config remote.origin.url https://github.com/awais-clouddev/kubernetes-jenkins-platform.git # timeout=10
+ > git config --add remote.origin.fetch +refs/heads/*:refs/remotes/origin/* # timeout=10
+Avoid second fetch
+Checking out Revision 4f650e4ff3175d2ac0dc0c1f9bd9f93278b1dde1 (refs/remotes/origin/main)
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f 4f650e4ff3175d2ac0dc0c1f9bd9f93278b1dde1 # timeout=10
+Commit message: "Build secure Jenkins Kubernetes CI platform foundation"
+First time build. Skipping changelog.
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Validation)
+[Pipeline] container
+[Pipeline] {
+[Pipeline] sh
++ test -f api/Dockerfile
++ test -f api/requirements.txt
++ test -f frontend/Dockerfile
++ test -f frontend/index.html
++ test -f frontend/app.js
++ python -m py_compile api/app/main.py
+[Pipeline] }
+[Pipeline] // container
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Backend Tests)
+[Pipeline] container
+[Pipeline] {
+[Pipeline] sh
++ python -m venv .venv
++ . .venv/bin/activate
++ deactivate nondestructive
++ [ -n  ]
++ [ -n  ]
++ hash -r
++ [ -n  ]
++ unset VIRTUAL_ENV
++ unset VIRTUAL_ENV_PROMPT
++ [ ! nondestructive = nondestructive ]
++ uname
++ export VIRTUAL_ENV=/home/jenkins/agent/workspace/project6-ci-pipeline/.venv
++ _OLD_VIRTUAL_PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++ PATH=/home/jenkins/agent/workspace/project6-ci-pipeline/.venv/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++ export PATH
++ VIRTUAL_ENV_PROMPT=.venv
++ export VIRTUAL_ENV_PROMPT
++ [ -n  ]
++ [ -z  ]
++ _OLD_VIRTUAL_PS1=$ 
++ PS1=(.venv) $ 
++ export PS1
++ hash -r
++ pip install --quiet -r api/requirements.txt pytest httpx
+WARNING: The directory '/.cache/pip' or its parent directory is not owned or is not writable by the current user. The cache has been disabled. Check the permissions and owner of that directory. If executing pip with sudo, you should use sudo's -H flag.
++ PYTHONPATH=api pytest -q api/tests
+.                                                                        [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /home/jenkins/agent/workspace/project6-ci-pipeline/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1 passed, 1 warning in 0.37s
+[Pipeline] }
+[Pipeline] // container
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Frontend Tests)
+[Pipeline] sh
++ test -s frontend/index.html
++ test -s frontend/app.js
++ test -s frontend/style.css
++ grep -qi <html frontend/index.html
++ echo FRONTEND_TEST_OK
+FRONTEND_TEST_OK
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] deleteDir
+[Pipeline] }
+[Pipeline] // timeout
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+Finished: SUCCESS

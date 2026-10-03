@@ -1,4 +1,7 @@
 controller:
+  image:
+    pullPolicy: IfNotPresent
+
   numExecutors: 0
 
   initContainerEnv:
@@ -22,6 +25,8 @@ controller:
     - job-dsl:3732.v9a_c49a_61a_313
 
   installLatestPlugins: false
+
+  overwritePlugins: true
 
   JCasC:
     defaultConfig: true

@@ -16,6 +16,11 @@ frontend:
 
 api:
   replicaCount: 2
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 50
   image:
     repository: ghcr.io/awais-clouddev/kubernetes-jenkins-platform-api
     digest: sha256:4e77abc94de46a35a7d9ddcc4ceee2dfed08fae2a0497353ccdd414a1a8effea
@@ -46,3 +51,4 @@ redis:
       cpu: 250m
       memory: 128Mi
   enabled: true
+

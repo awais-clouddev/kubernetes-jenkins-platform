@@ -1,0 +1,25 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: helpdesk-staging-api
+  namespace: helpdesk-staging
+spec:
+  parentRefs:
+    - name: helpdesk-gateway
+      namespace: envoy-gateway-system
+  hostnames:
+    - staging.helpdesk.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: helpdesk-api
+          port: 8000

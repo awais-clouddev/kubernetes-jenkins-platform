@@ -1,0 +1,31 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: helpdesk-availability-alert
+  namespace: observability
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: helpdesk.application.availability
+      rules:
+        - alert: HelpdeskDeploymentUnavailable
+          expr: |
+            max by (namespace, deployment) (
+              kube_deployment_status_replicas_available{
+                namespace="helpdesk-staging"
+              }
+            )
+            <
+            max by (namespace, deployment) (
+              kube_deployment_spec_replicas{
+                namespace="helpdesk-staging"
+              }
+            )
+          for: 1m
+          labels:
+            severity: warning
+            project: kubernetes-jenkins-platform
+          annotations:
+            summary: "Helpdesk deployment has unavailable replicas"
+            description: "Deployment {{ $labels.deployment }} in namespace {{ $labels.namespace }} has fewer available replicas than desired."

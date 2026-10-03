@@ -1,0 +1,48 @@
+=== NODES ===
+NAME                                        STATUS   ROLES           AGE   VERSION
+kubernetes-jenkins-platform-control-plane   Ready    control-plane   8d    v1.37.0
+kubernetes-jenkins-platform-worker          Ready    <none>          8d    v1.37.0
+kubernetes-jenkins-platform-worker2         Ready    <none>          8d    v1.37.0
+kubernetes-jenkins-platform-worker3         Ready    <none>          8d    v1.37.0
+=== STAGING ===
+NAME                                READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/helpdesk-api        2/2     2            2           3d11h
+deployment.apps/helpdesk-frontend   2/2     2            2           3d11h
+deployment.apps/redis               1/1     1            1           3d11h
+
+NAME                        READY   AGE
+statefulset.apps/postgres   1/1     3d11h
+=== PRODUCTION ===
+NAME                                READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/helpdesk-api        3/3     1            3           70m
+deployment.apps/helpdesk-frontend   3/3     3            3           70m
+deployment.apps/redis               1/1     1            1           70m
+
+NAME                        READY   AGE
+statefulset.apps/postgres   1/1     70m
+=== PDB ===
+NAMESPACE             NAME           MIN AVAILABLE   MAX UNAVAILABLE   ALLOWED DISRUPTIONS   AGE
+helpdesk-production   helpdesk-api   1               N/A               2                     70m
+helpdesk-staging      helpdesk-api   1               N/A               1                     4h53m
+=== GATEWAY ===
+NAMESPACE              NAME                                                 CLASS   ADDRESS        PROGRAMMED   AGE
+envoy-gateway-system   gateway.gateway.networking.k8s.io/helpdesk-gateway   envoy   10.96.198.59   True         2d1h
+
+NAMESPACE          NAME                                                            HOSTNAMES                    AGE
+helpdesk-staging   httproute.gateway.networking.k8s.io/helpdesk-staging-api        ["staging.helpdesk.local"]   2d
+helpdesk-staging   httproute.gateway.networking.k8s.io/helpdesk-staging-frontend   ["staging.helpdesk.local"]   2d
+=== OBSERVABILITY ===
+alertmanager-monitoring-kube-prometheus-alertmanager-0   2/2     Running            2 (41m ago)      166m
+monitoring-grafana-7567d648cc-98qdr                      3/3     Running            9 (13m ago)      159m
+monitoring-kube-prometheus-operator-55c58c4f6c-gc9hb     0/1     CrashLoopBackOff   16 (3m22s ago)   3h27m
+monitoring-kube-prometheus-operator-b4cc96949-fbzln      0/1     Running            3 (0s ago)       91s
+monitoring-prometheus-node-exporter-68jcn                1/1     Running            1 (42m ago)      4h35m
+monitoring-prometheus-node-exporter-8c6sl                1/1     Running            1 (42m ago)      4h35m
+monitoring-prometheus-node-exporter-jbf65                1/1     Running            1 (41m ago)      4h35m
+monitoring-prometheus-node-exporter-zgd2k                1/1     Running            1 (42m ago)      4h35m
+prometheus-monitoring-kube-prometheus-prometheus-0       2/2     Running            2 (41m ago)      166m
+=== HELM ROLLBACK ===
+13      	Sat Oct  3 19:32:51 2026	superseded	helpdesk-0.1.0	1.0.0      	Upgrade complete                                                                                                                           
+14      	Sun Oct  4 00:02:58 2026	failed    	helpdesk-0.1.0	1.0.0      	Upgrade "helpdesk-staging" failed: resource Deployment/helpdesk-staging/helpdesk-api not ready. status: InProgress, message: Available: ...
+15      	Sun Oct  4 00:06:52 2026	failed    	helpdesk-0.1.0	1.0.0      	Release "helpdesk-staging" failed: resource Deployment/helpdesk-staging/helpdesk-api not ready. status: InProgress, message: Available: ...
+16      	Sun Oct  4 00:08:51 2026	deployed  	helpdesk-0.1.0	1.0.0      	Rollback to 13                                                                                                                             

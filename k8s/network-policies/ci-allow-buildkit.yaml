@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-build-agent-to-buildkit
+  namespace: ci-build-agents
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: buildkit-system
+          podSelector:
+            matchLabels:
+              app: buildkitd
+      ports:
+        - protocol: TCP
+          port: 1234
