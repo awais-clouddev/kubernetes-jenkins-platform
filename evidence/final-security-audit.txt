@@ -1,0 +1,207 @@
+PROJECT 6 — FINAL SECURITY / PLATFORM AUDIT
+Date: 2026-10-04
+
+AUDITED SOURCE
+==============
+Validated Git commit:
+c08d8af3caad534d60dd34bf6465a3b64737e8ba
+Harden deploy agent network access
+
+FINAL JENKINS PIPELINE
+======================
+Build: 18
+Result: SUCCESS
+
+TRIVY_FRONTEND_SCAN_PASS
+TRIVY_API_SCAN_PASS
+STAGING_DEPLOYMENT_VERIFIED=true
+PRODUCTION_DEPLOYMENT_VERIFIED=true
+IMMUTABLE_PROMOTION_VERIFIED=true
+
+Immutable Build 18 artifacts:
+
+Frontend:
+sha256:005b4543ec059e9f2fb995218c9a2ceb0825865299eca9a004190aa6059bf49a
+
+API:
+sha256:96eff54d5611f3b5d3a08fe9c0a3bc8b5fce1e99f2f9cd0331baf8c2a053adc2
+
+The same verified image digests were promoted from staging to production.
+
+SECURITY GATES
+==============
+- Backend tests passed.
+- Frontend tests passed.
+- Images built with rootless BuildKit.
+- BuildKit client/server mTLS validated.
+- HIGH/CRITICAL Trivy deployment gate validated.
+- Vulnerable images were previously rejected by Build 15.
+- CVE-2026-103111 remediation was subsequently validated.
+- Failed security scans cannot enter staging deployment.
+- Production requires explicit Jenkins manual approval.
+- No Kubernetes deployment agent is held while production approval waits.
+
+JENKINS SECURITY
+================
+- useSecurity=true
+- denyAnonymousReadAccess=true
+- Anonymous Jenkins API returned HTTP 403.
+- Anonymous pipeline API returned HTTP 403.
+- HudsonPrivateSecurityRealm in use.
+- allowsSignup=false
+- CSRF crumb issuer enabled.
+- FullControlOnceLoggedInAuthorizationStrategy is appropriate only for this
+  single-user local lab and is not an enterprise multi-user authorization model.
+
+DEPLOYMENT AGENTS
+=================
+- Dedicated staging-deployer ServiceAccount.
+- Dedicated production-deployer ServiceAccount.
+- Cross-environment RBAC restrictions validated.
+- Deploy agents run non-root.
+- RuntimeDefault seccomp.
+- Privilege escalation disabled.
+- Ephemeral agents are removed after jobs complete.
+- Deploy tooling uses pinned alpine/k8s image.
+- kubectl and Helm functionality validated.
+
+DEPLOY-AGENT NETWORK SECURITY
+=============================
+ci-deploy-agents now has:
+- default-deny-ingress
+- default-deny-egress
+- allow-deploy-agent-dns
+- allow-deploy-agent-to-jenkins
+- allow-deploy-agent-to-kubernetes-api
+
+The restricted staging and production deployment agents successfully completed
+the final Build 18 pipeline.
+
+APPLICATION SECURITY / RUNTIME
+==============================
+- Hard-coded/fallback database password removed from application source.
+- DATABASE_PASSWORD is mandatory through environment/Secret configuration.
+- Runtime Secret bootstrap requires explicit credentials.
+- Application Pods use non-root security contexts.
+- Privilege escalation disabled.
+- Linux capabilities dropped.
+- Restricted Pod Security standards used for application/CI namespaces where applicable.
+- Staging API readiness probe migrated to HTTP /health.
+- Production API readiness probe uses HTTP /health.
+
+RBAC
+====
+- Jenkins controller does not have cluster-admin.
+- Build agents cannot modify application workloads.
+- Staging deployer cannot modify production.
+- Production deployer cannot modify staging.
+- Deploy RBAC includes Helm-required HPA/PDB permissions only where needed.
+
+NETWORKPOLICY
+=============
+- CI build-agent namespace uses default-deny ingress/egress.
+- Explicit BuildKit/Jenkins/DNS/external HTTPS paths exist for build agents.
+- BuildKit ingress is restricted to CI build agents.
+- Staging and production application namespaces use default-deny policies.
+- Explicit API/database/Redis/Gateway/monitoring paths are defined.
+- Deploy-agent namespace hardened during final audit.
+
+BUILDKIT
+========
+- Rootless BuildKit.
+- Dedicated namespace.
+- mTLS required.
+- Connection without client certificate rejected.
+- Valid client certificate successfully authenticated.
+- No hostNetwork, hostPID, hostIPC, or hostPath usage.
+
+Scoped local-lab exception:
+BuildKit requires its documented rootless process-sandbox/security-profile
+exceptions in this Kind environment.
+
+HELM / DEPLOYMENT SAFETY
+========================
+- Helm staging deployment validated.
+- Helm production deployment validated.
+- Production release revision 3 reached STATUS: deployed.
+- --rollback-on-failure behavior was validated during Build 17.
+- Existing healthy workloads remained available during failed upgrade attempts.
+- Final Build 18 completed cleanly.
+
+GATEWAY API
+===========
+- Envoy GatewayClass Accepted=True.
+- helpdesk-gateway Programmed=True.
+- Staging frontend/API HTTPRoutes present.
+- Production frontend/API HTTPRoutes present.
+
+OBSERVABILITY
+=============
+- Prometheus running.
+- Grafana running.
+- Alertmanager running.
+- kube-state-metrics running.
+- node-exporter running across cluster nodes.
+- Custom HelpdeskDeploymentUnavailable alert lifecycle previously validated:
+  Inactive -> Pending -> Firing -> Alertmanager -> Resolved.
+
+STORAGE / AVAILABILITY
+======================
+- Persistent PostgreSQL storage in staging and production.
+- Jenkins persistent storage present.
+- PodDisruptionBudget configured for API workload.
+- Staging HPA configured and functional.
+- Production scaling configuration intentionally differs from staging.
+
+FINAL PRODUCTION STATE
+======================
+Production Helm release:
+STATUS: deployed
+REVISION: 3
+
+Production application Pods:
+- API replicas healthy.
+- Frontend replicas healthy.
+- PostgreSQL healthy.
+- Redis healthy.
+
+FINAL AUDIT LIMITATIONS / NOTES
+===============================
+1. This is a local multi-node Kind/WSL lab, not a managed production cluster.
+2. WSL/Docker DNS can become stale after WSL shutdown/restart. During audit,
+   Kind node DNS required repair before GHCR image pulls could continue.
+3. fs.inotify.max_user_instances required adjustment for kube-proxy after
+   WSL restarts.
+4. Jenkins authorization uses FullControlOnceLoggedIn and should be replaced
+   with enterprise RBAC/SSO for real multi-user deployment.
+5. API image digests changed across separate builds of the same source commit
+   because some base/system/Python dependency inputs are dynamically resolved.
+   Immutable promotion within each pipeline run is verified, but fully
+   reproducible builds would require stronger dependency/base-image pinning.
+6. BuildKit has scoped rootless security-profile exceptions required by this
+   local environment.
+7. Gitleaks was not installed during this audit; no claim of a Gitleaks scan
+   is made.
+8. Kind-specific Kubernetes API networking values must be replaced with the
+   appropriate private/control-plane networking design in EKS or another
+   managed Kubernetes platform.
+
+FINAL ASSESSMENT
+================
+The platform successfully demonstrates an end-to-end secured CI/CD workflow:
+
+Git
+ -> Jenkins
+ -> ephemeral Kubernetes build agent
+ -> rootless mTLS BuildKit
+ -> immutable GHCR image digests
+ -> Trivy security gate
+ -> staging Helm deployment
+ -> validation
+ -> manual production approval
+ -> ephemeral production deploy agent
+ -> production Helm deployment
+ -> same immutable artifact promotion
+ -> observability and rollback controls
+
+Final technical audit result: PASS
