@@ -1,8 +1,9 @@
 FROM public.ecr.aws/docker/library/nginx:alpine
 
-# Security patch:
-# CVE-2026-93990 requires libexpat >= 2.8.5-r0.
-RUN apk upgrade --no-cache libexpat
+# Security patches:
+# CVE-2026-93990: update libexpat.
+# CVE-2026-103111: update pcre2 to a fixed release.
+RUN apk upgrade --no-cache libexpat pcre2
 
 COPY index.html /usr/share/nginx/html/index.html
 COPY style.css /usr/share/nginx/html/style.css
