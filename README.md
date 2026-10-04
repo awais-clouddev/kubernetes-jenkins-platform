@@ -122,13 +122,13 @@ Deployments use immutable image digests instead of mutable tags.
 ### API
 
 ```text
-ghcr.io/awais-clouddev/kubernetes-jenkins-platform-api@sha256:4e77abc94de46a35a7d9ddcc4ceee2dfed08fae2a0497353ccdd414a1a8effea
+ghcr.io/awais-clouddev/kubernetes-jenkins-platform-api@sha256:96eff54d5611f3b5d3a08fe9c0a3bc8b5fce1e99f2f9cd0331baf8c2a053adc2
 ```
 
 ### Frontend
 
 ```text
-ghcr.io/awais-clouddev/kubernetes-jenkins-platform-frontend@sha256:dac961f7f5b26fa2610e05865dc18cdb3c95ddc665c4ca78133609f4c4996a5e
+ghcr.io/awais-clouddev/kubernetes-jenkins-platform-frontend@sha256:005b4543ec059e9f2fb995218c9a2ceb0825865299eca9a004190aa6059bf49a
 ```
 
 The same API and frontend digests were verified in both Staging and Production.

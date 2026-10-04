@@ -2,7 +2,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-envoy-to-frontend
-  namespace: helpdesk-staging
+  namespace: helpdesk-production
 spec:
   podSelector:
     matchLabels:
@@ -22,7 +22,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-envoy-to-api
-  namespace: helpdesk-staging
+  namespace: helpdesk-production
 spec:
   podSelector:
     matchLabels:

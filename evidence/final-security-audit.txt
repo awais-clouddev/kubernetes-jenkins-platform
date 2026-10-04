@@ -205,3 +205,11 @@ Git
  -> observability and rollback controls
 
 Final technical audit result: PASS
+
+FINAL SOURCE CONSISTENCY VALIDATION
+===================================
+- Production HTTPRoute now rewrites /api to /, matching staging behavior.
+- Production Envoy-to-Frontend and Envoy-to-API NetworkPolicies are checked in.
+- Envoy frontend NetworkPolicy allows container destination port 8080.
+- Staging and production Gateway API frontend/API paths were functionally validated.
+- README immutable image digests were updated to the authoritative Build 18 values.
