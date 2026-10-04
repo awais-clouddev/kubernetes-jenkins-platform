@@ -1,0 +1,193 @@
+digraph JenkinsAgents {
+  graph [
+    rankdir=TB,
+    bgcolor="white",
+    pad=0.35,
+    nodesep=0.35,
+    ranksep=0.55,
+    splines=polyline,
+    fontname="Helvetica",
+    fontsize=20,
+    labelloc="t",
+    label="Jenkins Controller and Ephemeral Agent Architecture"
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    fillcolor="#F8FAFC",
+    color="#334155",
+    fontcolor="#0F172A",
+    fontname="Helvetica",
+    fontsize=11,
+    penwidth=1.2,
+    margin="0.18,0.10",
+    width=3.8
+  ];
+
+  edge [
+    color="#475569",
+    fontcolor="#475569",
+    fontname="Helvetica",
+    fontsize=9,
+    penwidth=1.1,
+    arrowsize=0.75
+  ];
+
+  github [
+    label="GitHub\nSource Repository",
+    fillcolor="#F8FAFC"
+  ];
+
+  subgraph cluster_jenkins {
+    label="jenkins namespace";
+    color="#CBD5E1";
+    penwidth=1.1;
+    style="rounded";
+    bgcolor="#FCFCFD";
+
+    jenkins [
+      label="Jenkins Controller\nAlways running\nPipeline orchestration",
+      fillcolor="#F1F5F9"
+    ];
+
+    pvc [
+      label="Jenkins Persistent Storage\nJENKINS_HOME",
+      fillcolor="#F8FAFC",
+      width=3.3
+    ];
+
+    jenkins -> pvc [
+      dir=both,
+      arrowtail=none,
+      label="persistent state",
+      style=dashed
+    ];
+  }
+
+  subgraph cluster_build {
+    label="ci-build-agents namespace";
+    color="#93C5FD";
+    penwidth=1.2;
+    style="rounded";
+    bgcolor="#F8FBFF";
+
+    build [
+      label="Ephemeral Build Agent\nServiceAccount: jenkins-build-agent",
+      fillcolor="#EFF6FF",
+      color="#60A5FA"
+    ];
+  }
+
+  subgraph cluster_buildkit {
+    label="buildkit-system namespace";
+    color="#93C5FD";
+    penwidth=1.2;
+    style="rounded";
+    bgcolor="#F8FBFF";
+
+    buildkit [
+      label="Rootless BuildKit\nClient / Server mTLS",
+      fillcolor="#EFF6FF",
+      color="#60A5FA"
+    ];
+  }
+
+  ghcr [
+    label="GitHub Container Registry (GHCR)\nImmutable SHA256 digests"
+  ];
+
+  trivy [
+    label="Trivy Security Gate\nHIGH / CRITICAL blocked",
+    fillcolor="#ECFDF5",
+    color="#34D399"
+  ];
+
+  subgraph cluster_deploy {
+    label="ci-deploy-agents namespace";
+    color="#93C5FD";
+    penwidth=1.2;
+    style="rounded";
+    bgcolor="#F8FBFF";
+
+    staging_agent [
+      label="Ephemeral Staging Deploy Agent\nServiceAccount: staging-deployer",
+      fillcolor="#EFF6FF",
+      color="#60A5FA"
+    ];
+
+    prod_agent [
+      label="Ephemeral Production Deploy Agent\nServiceAccount: production-deployer",
+      fillcolor="#EFF6FF",
+      color="#60A5FA"
+    ];
+  }
+
+  staging [
+    label="helpdesk-staging namespace\nHelm deploy + verify",
+    fillcolor="#F0FDF4",
+    color="#4ADE80"
+  ];
+
+  approval [
+    label="Manual Production Approval\nNo deploy agent held while waiting",
+    shape=diamond,
+    style="filled",
+    fillcolor="#FFF7ED",
+    color="#FB923C",
+    width=3.5,
+    height=0.85
+  ];
+
+  production [
+    label="helpdesk-production namespace\nHelm deploy same verified SHA256 digests",
+    fillcolor="#F0FDF4",
+    color="#4ADE80"
+  ];
+
+  api [
+    label="Kubernetes API Server\nCreate / delete ephemeral agent Pods",
+    fillcolor="#F8FAFC"
+  ];
+
+  controls [
+    label="Security boundaries\nDedicated ServiceAccounts • Namespace-scoped RBAC • NetworkPolicies • non-root agents",
+    shape=note,
+    fillcolor="#FFF7ED",
+    color="#FDBA74",
+    width=5.5
+  ];
+
+  github -> jenkins [label="webhook / checkout"];
+
+  jenkins -> build [label="create ephemeral Pod"];
+  build -> buildkit [label="mTLS"];
+  buildkit -> ghcr [label="push immutable images"];
+  ghcr -> trivy [label="scan by digest"];
+  trivy -> jenkins [label="gate passed"];
+
+  jenkins -> staging_agent [label="create after security gate"];
+  staging_agent -> staging [label="Helm deploy + verify"];
+  staging_agent -> jenkins [label="job complete / Pod removed", style=dashed];
+
+  staging -> approval [label="validated"];
+  approval -> jenkins [label="approved"];
+
+  jenkins -> prod_agent [label="create only after approval"];
+  prod_agent -> production [label="Helm deploy"];
+  prod_agent -> jenkins [label="job complete / Pod removed", style=dashed];
+
+  ghcr -> production [
+    label="same verified SHA256 digests",
+    style=dashed,
+    color="#2563EB",
+    fontcolor="#2563EB"
+  ];
+
+  jenkins -> api [label="Kubernetes API"];
+  build -> api [style=dashed, label="Kubernetes API"];
+  staging_agent -> api [style=dashed, label="Kubernetes API"];
+  prod_agent -> api [style=dashed, label="Kubernetes API"];
+
+  production -> controls [style=invis];
+}
