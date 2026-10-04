@@ -1,0 +1,61 @@
+digraph CICD {
+  graph [
+    rankdir=TB,
+    bgcolor="white",
+    pad=0.35,
+    nodesep=0.32,
+    ranksep=0.48,
+    splines=polyline,
+    fontname="Helvetica",
+    fontsize=20,
+    labelloc="t",
+    label="Secure Kubernetes CI/CD Pipeline"
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    fillcolor="#F8FAFC",
+    color="#334155",
+    fontcolor="#0F172A",
+    fontname="Helvetica",
+    fontsize=11,
+    penwidth=1.2,
+    margin="0.18,0.10",
+    width=3.8
+  ];
+
+  edge [
+    color="#475569",
+    fontcolor="#475569",
+    fontname="Helvetica",
+    fontsize=9,
+    penwidth=1.1,
+    arrowsize=0.75
+  ];
+
+  github [label="GitHub\nSource Repository"];
+  jenkins [label="Jenkins Controller\njenkins namespace", fillcolor="#F1F5F9"];
+  build [label="Ephemeral Build Agent\nci-build-agents namespace\nServiceAccount: jenkins-build-agent", fillcolor="#EFF6FF", color="#60A5FA"];
+  buildkit [label="Rootless BuildKit\nbuildkit-system namespace\nClient / Server mTLS", fillcolor="#EFF6FF", color="#60A5FA"];
+  ghcr [label="GitHub Container Registry (GHCR)\nImmutable SHA256 Image Digests"];
+  trivy [label="Trivy Security Gate\nHIGH / CRITICAL vulnerabilities blocked", fillcolor="#ECFDF5", color="#34D399"];
+  stage_agent [label="Staging Deploy Agent / Helm\nci-deploy-agents namespace\nServiceAccount: staging-deployer", fillcolor="#EFF6FF", color="#60A5FA"];
+  staging [label="helpdesk-staging namespace\nFrontend • API • PostgreSQL • Redis", fillcolor="#F0FDF4", color="#4ADE80"];
+  approval [label="Manual Production Approval", shape=diamond, style="filled", fillcolor="#FFF7ED", color="#FB923C", width=3.3, height=0.75];
+  prod_agent [label="Production Deploy Agent / Helm\nci-deploy-agents namespace\nServiceAccount: production-deployer", fillcolor="#EFF6FF", color="#60A5FA"];
+  production [label="helpdesk-production namespace\nFrontend • API • PostgreSQL • Redis", fillcolor="#F0FDF4", color="#4ADE80"];
+  controls [label="Cross-cutting controls\nRBAC • dedicated ServiceAccounts • NetworkPolicies • Pod Security • non-root workloads", shape=note, fillcolor="#FFF7ED", color="#FDBA74", width=5.2];
+
+  github -> jenkins [label="webhook / checkout"];
+  jenkins -> build [label="create ephemeral pod"];
+  build -> buildkit [label="mTLS"];
+  buildkit -> ghcr [label="push immutable images"];
+  ghcr -> trivy [label="scan by digest"];
+  trivy -> stage_agent [label="security gate passed"];
+  stage_agent -> staging [label="Helm deploy + verify"];
+  staging -> approval [label="validated"];
+  approval -> prod_agent [label="approved"];
+  prod_agent -> production [label="Helm deploy same verified SHA256 digests"];
+  production -> controls [style=invis];
+}
