@@ -306,6 +306,162 @@ PY2
                 echo "DEPLOY_ELIGIBLE_API_DIGEST=${env.API_DIGEST}"
             }
 
+              stage('Prepare Deployment Artifact') {
+                  stash(
+                      name: 'deployment-chart',
+                      includes: 'helm/helpdesk/**,evidence/phase10-pipeline/**',
+                      useDefaultExcludes: false
+                  )
+
+                  echo "DEPLOYMENT_CHART_STASHED=true"
+              }
+
+        } finally {
+            deleteDir()
+        }
+    }
+}
+
+node('k8s-staging-deploy-agent') {
+    timeout(time: 10, unit: 'MINUTES') {
+        try {
+            stage('Deploy to Staging') {
+                deleteDir()
+                unstash 'deployment-chart'
+
+                container('deploy-tools') {
+                    sh '''
+                        set -eu
+
+                        test -f evidence/phase10-pipeline/deploy-eligible.json
+
+                        test "$(cat evidence/phase10-pipeline/frontend-digest.txt)" = "$FRONTEND_DIGEST"
+                        test "$(cat evidence/phase10-pipeline/api-digest.txt)" = "$API_DIGEST"
+
+                        EXPECTED_FRONTEND="ghcr.io/awais-clouddev/kubernetes-jenkins-platform-frontend@${FRONTEND_DIGEST}"
+                        EXPECTED_API="ghcr.io/awais-clouddev/kubernetes-jenkins-platform-api@${API_DIGEST}"
+
+                        helm upgrade --install helpdesk-staging ./helm/helpdesk \
+                          --namespace helpdesk-staging \
+                          --values helm/helpdesk/values-staging.yaml \
+                          --set-string frontend.image.digest="${FRONTEND_DIGEST}" \
+                          --set-string api.image.digest="${API_DIGEST}" \
+                          --rollback-on-failure \
+                          --timeout 5m
+
+                        kubectl rollout status deployment/helpdesk-frontend \
+                          -n helpdesk-staging --timeout=180s
+
+                        kubectl rollout status deployment/helpdesk-api \
+                          -n helpdesk-staging --timeout=180s
+
+                        ACTUAL_FRONTEND="$(kubectl get deployment helpdesk-frontend \
+                          -n helpdesk-staging \
+                          -o jsonpath='{.spec.template.spec.containers[0].image}')"
+
+                        ACTUAL_API="$(kubectl get deployment helpdesk-api \
+                          -n helpdesk-staging \
+                          -o jsonpath='{.spec.template.spec.containers[0].image}')"
+
+                        test "$ACTUAL_FRONTEND" = "$EXPECTED_FRONTEND"
+                        test "$ACTUAL_API" = "$EXPECTED_API"
+
+                        mkdir -p evidence/phase10-pipeline
+
+                        {
+                          echo "environment=staging"
+                          echo "gitSha=${GIT_COMMIT}"
+                          echo "frontend=${ACTUAL_FRONTEND}"
+                          echo "api=${ACTUAL_API}"
+                          echo "verification=PASS"
+                        } > evidence/phase10-pipeline/staging-deployment.txt
+
+                        echo "STAGING_DEPLOYMENT_VERIFIED=true"
+                    '''
+                }
+
+                archiveArtifacts(
+                    artifacts: 'evidence/phase10-pipeline/staging-deployment.txt',
+                    fingerprint: true
+                )
+            }
+        } finally {
+            deleteDir()
+        }
+    }
+}
+
+stage('Production Approval') {
+    timeout(time: 15, unit: 'MINUTES') {
+        input(
+            message: "Promote verified Git commit ${env.GIT_COMMIT} to production?",
+            ok: 'Deploy to Production'
+        )
+    }
+}
+
+node('k8s-production-deploy-agent') {
+    timeout(time: 10, unit: 'MINUTES') {
+        try {
+            stage('Deploy to Production') {
+                deleteDir()
+                unstash 'deployment-chart'
+
+                container('deploy-tools') {
+                    sh '''
+                        set -eu
+
+                        test -f evidence/phase10-pipeline/deploy-eligible.json
+
+                        test "$(cat evidence/phase10-pipeline/frontend-digest.txt)" = "$FRONTEND_DIGEST"
+                        test "$(cat evidence/phase10-pipeline/api-digest.txt)" = "$API_DIGEST"
+
+                        EXPECTED_FRONTEND="ghcr.io/awais-clouddev/kubernetes-jenkins-platform-frontend@${FRONTEND_DIGEST}"
+                        EXPECTED_API="ghcr.io/awais-clouddev/kubernetes-jenkins-platform-api@${API_DIGEST}"
+
+                        helm upgrade --install helpdesk-production ./helm/helpdesk \
+                          --namespace helpdesk-production \
+                          --values helm/helpdesk/values-production.yaml \
+                          --set-string frontend.image.digest="${FRONTEND_DIGEST}" \
+                          --set-string api.image.digest="${API_DIGEST}" \
+                          --rollback-on-failure \
+                          --timeout 5m
+
+                        kubectl rollout status deployment/helpdesk-frontend \
+                          -n helpdesk-production --timeout=180s
+
+                        kubectl rollout status deployment/helpdesk-api \
+                          -n helpdesk-production --timeout=180s
+
+                        ACTUAL_FRONTEND="$(kubectl get deployment helpdesk-frontend \
+                          -n helpdesk-production \
+                          -o jsonpath='{.spec.template.spec.containers[0].image}')"
+
+                        ACTUAL_API="$(kubectl get deployment helpdesk-api \
+                          -n helpdesk-production \
+                          -o jsonpath='{.spec.template.spec.containers[0].image}')"
+
+                        test "$ACTUAL_FRONTEND" = "$EXPECTED_FRONTEND"
+                        test "$ACTUAL_API" = "$EXPECTED_API"
+
+                        {
+                          echo "environment=production"
+                          echo "gitSha=${GIT_COMMIT}"
+                          echo "frontend=${ACTUAL_FRONTEND}"
+                          echo "api=${ACTUAL_API}"
+                          echo "verification=PASS"
+                        } > evidence/phase10-pipeline/production-deployment.txt
+
+                        echo "PRODUCTION_DEPLOYMENT_VERIFIED=true"
+                        echo "IMMUTABLE_PROMOTION_VERIFIED=true"
+                    '''
+                }
+
+                archiveArtifacts(
+                    artifacts: 'evidence/phase10-pipeline/production-deployment.txt',
+                    fingerprint: true
+                )
+            }
         } finally {
             deleteDir()
         }

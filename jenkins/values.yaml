@@ -159,12 +159,21 @@ additionalClouds:
               type: RuntimeDefault
           containers:
             - name: deploy-tools
-              image: jenkins/inbound-agent:3384.v60d89463d9e0-1
+              image: alpine/k8s@sha256:712dc5385d1c1a3f83b747fa9e40f64d433a97f72ff42f9755ff7dd1f62846e4
               imagePullPolicy: IfNotPresent
               command:
                 - sh
                 - -c
                 - sleep 86400
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: HELM_CACHE_HOME
+                  value: /tmp/helm/cache
+                - name: HELM_CONFIG_HOME
+                  value: /tmp/helm/config
+                - name: HELM_DATA_HOME
+                  value: /tmp/helm/data
               resources:
                 requests:
                   cpu: "100m"
@@ -212,12 +221,21 @@ additionalClouds:
               type: RuntimeDefault
           containers:
             - name: deploy-tools
-              image: jenkins/inbound-agent:3384.v60d89463d9e0-1
+              image: alpine/k8s@sha256:712dc5385d1c1a3f83b747fa9e40f64d433a97f72ff42f9755ff7dd1f62846e4
               imagePullPolicy: IfNotPresent
               command:
                 - sh
                 - -c
                 - sleep 86400
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: HELM_CACHE_HOME
+                  value: /tmp/helm/cache
+                - name: HELM_CONFIG_HOME
+                  value: /tmp/helm/config
+                - name: HELM_DATA_HOME
+                  value: /tmp/helm/data
               resources:
                 requests:
                   cpu: "100m"

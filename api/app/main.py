@@ -35,7 +35,7 @@ def get_database_connection():
         host=os.getenv("DATABASE_HOST", "postgres"),
         database=os.getenv("DATABASE_NAME", "helpdesk"),
         user=os.getenv("DATABASE_USER", "helpdesk"),
-        password=os.getenv("DATABASE_PASSWORD", "password"),
+        password=os.environ["DATABASE_PASSWORD"],
     )
 
 
