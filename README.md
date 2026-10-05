@@ -1,6 +1,12 @@
-# Kubernetes Jenkins Platform
+# Secure Kubernetes CI/CD Platform
 
-A senior-oriented Kubernetes / Platform Engineering portfolio project demonstrating secure CI/CD, ephemeral Jenkins agents, rootless container builds, immutable artifact promotion, Kubernetes security, networking, storage, autoscaling, observability, resilience, and production-style deployment workflows.
+**Jenkins · Kubernetes · Rootless BuildKit · mTLS · GHCR · Trivy · Helm · Envoy Gateway · Prometheus**
+
+A Kubernetes and Platform Engineering project demonstrating secure CI/CD, ephemeral Jenkins agents, rootless image builds over mTLS, immutable SHA256 artifact promotion, staged Helm delivery, least-privilege Kubernetes security, resilience testing, and metrics-based observability.
+
+> **Scope:** Implemented and validated on a multi-node Kind cluster. AWS/EKS is documented as a production architecture mapping, not claimed as deployed infrastructure.
+
+![Secure Kubernetes CI/CD Platform Architecture](docs/diagrams/01-ci-cd-pipeline-flow.png)
 
 ---
 
@@ -19,11 +25,15 @@ Rootless BuildKit
    ↓
 GHCR Immutable Image Digests
    ↓
+Trivy Security Gate
+   ↓
 Helm
    ↓
 Staging
    ↓
-Promotion / Approval
+Validation
+   ↓
+Manual Approval
    ↓
 Same Immutable Artifact
    ↓
@@ -277,7 +287,14 @@ Kubernetes Service
 Application Pods
 ```
 
-Staging HTTPRoutes expose the Helpdesk application through the configured hostname.
+Staging and Production HTTPRoutes expose the Helpdesk application through:
+
+```text
+staging.helpdesk.local
+production.helpdesk.local
+```
+
+API traffic uses an `/api` prefix externally, which Gateway API rewrites before requests reach the FastAPI backend.
 
 ---
 
@@ -299,9 +316,9 @@ The local environment uses Kind/local-path storage.
 
 ## Horizontal Pod Autoscaler
 
-The API workload includes an HPA.
+The Staging API demonstrates Horizontal Pod Autoscaling with a minimum of 2 and maximum of 5 replicas.
 
-The HPA can increase or decrease application replicas according to resource demand.
+Production uses fixed replica counts in the final local-lab configuration.
 
 Architecture:
 
@@ -310,7 +327,7 @@ Metrics
   ↓
 HPA Controller
   ↓
-Deployment
+Staging API Deployment
   ↓
 More / Fewer Pods
 ```
@@ -390,29 +407,27 @@ This proves the complete Prometheus → Alert Rule → Alertmanager flow.
 
 ## Helm Failure and Rollback
 
-A deliberately invalid application image digest was deployed to create a controlled Helm failure.
+Rollback behavior was validated during failed deployment scenarios, including the Build 17 DNS/readiness failure path.
 
-Helm recorded the failed release.
-
-The application was then restored using Helm rollback.
+Helm detected that the new release could not become healthy and restored the previous known-good release.
 
 Verified sequence:
 
 ```text
 Working Release
       ↓
-Bad Image Digest
+New Deployment
+      ↓
+Health / Readiness Failure
       ↓
 Failed Helm Release
       ↓
-helm history
+Rollback
       ↓
-helm rollback
-      ↓
-Previous Immutable Release Restored
+Previous Known-Good Release Restored
 ```
 
-The final Helm history confirmed rollback to the known-good release.
+This demonstrated that the deployment workflow could recover safely from an unhealthy release rather than only handling successful deployments.
 
 ---
 
@@ -458,6 +473,7 @@ Final evidence is stored in:
 
 ```text
 evidence/final-platform-proof.txt
+evidence/final-security-audit.txt
 ```
 
 ---
@@ -502,6 +518,7 @@ Examples include:
 ```text
 evidence/
 ├── final-platform-proof.txt
+├── final-security-audit.txt
 ├── phase10-pipeline/
 ├── phase19-network-policy-tests.txt
 ├── phase20-pod-security-denial.txt
@@ -510,9 +527,9 @@ evidence/
 
 ---
 
-## Production-Oriented Design
+## AWS / EKS Architecture Mapping
 
-This project runs locally on a multi-node Kind Kubernetes cluster but models production-oriented Platform Engineering patterns.
+This project runs locally on a multi-node Kind Kubernetes cluster and includes a documented AWS/EKS architecture mapping for cloud deployment.
 
 ### Local → AWS Production Mapping
 
@@ -540,7 +557,6 @@ This project demonstrates:
 - secure image building
 - mTLS
 - immutable artifacts
-- GitOps-style deployment principles
 - environment promotion
 - Helm release management
 - rollback
@@ -555,7 +571,7 @@ This project demonstrates:
 - monitoring
 - alerting
 - resilience testing
-- production-oriented troubleshooting
+- platform troubleshooting
 
 ---
 
@@ -571,7 +587,7 @@ The purpose is to demonstrate the architecture, security model, automation, depl
 
 ## Project Goal
 
-The goal of Project 6 is to demonstrate how:
+The goal of this project is to demonstrate how:
 
 ```text
 CI/CD
