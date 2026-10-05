@@ -35,7 +35,7 @@ Production
 ## Architecture Diagrams
 
 - [01 — CI/CD Pipeline Flow](docs/diagrams/01-ci-cd-pipeline-flow.svg)
-- [02 — Jenkins Controller & Ephemeral Agents](docs/diagrams/02-jenkins-ephemeral-agents.svg)
+- [02 — Jenkins Controller & Ephemeral Agents](docs/diagrams/02-jenkins-ephemeral-agents.png)
 - [03 — Observability Architecture](docs/diagrams/03-observability-architecture.md)
 - [04 — AWS/EKS Production Mapping](docs/diagrams/04-aws-eks-production-mapping.md)
 
