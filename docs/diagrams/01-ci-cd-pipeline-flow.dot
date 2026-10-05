@@ -1,11 +1,11 @@
-digraph CICD {
+digraph CICDPipeline {
   graph [
     rankdir=TB,
     bgcolor="white",
     pad=0.35,
-    nodesep=0.32,
-    ranksep=0.48,
-    splines=polyline,
+    nodesep=0.34,
+    ranksep=0.52,
+    splines=ortho,
     fontname="Helvetica",
     fontsize=20,
     labelloc="t",
@@ -22,7 +22,7 @@ digraph CICD {
     fontsize=11,
     penwidth=1.2,
     margin="0.18,0.10",
-    width=3.8
+    width=4.0
   ];
 
   edge [
@@ -35,27 +35,30 @@ digraph CICD {
   ];
 
   github [label="GitHub\nSource Repository"];
-  jenkins [label="Jenkins Controller\njenkins namespace", fillcolor="#F1F5F9"];
-  build [label="Ephemeral Build Agent\nci-build-agents namespace\nServiceAccount: jenkins-build-agent", fillcolor="#EFF6FF", color="#60A5FA"];
+  jenkins [label="Jenkins Controller\njenkins namespace\nPipeline orchestration", fillcolor="#F1F5F9"];
+  build [label="Ephemeral Build Agent\nci-build-agents namespace\nSA: jenkins-build-agent", fillcolor="#EFF6FF", color="#60A5FA"];
   buildkit [label="Rootless BuildKit\nbuildkit-system namespace\nClient / Server mTLS", fillcolor="#EFF6FF", color="#60A5FA"];
-  ghcr [label="GitHub Container Registry (GHCR)\nImmutable SHA256 Image Digests"];
-  trivy [label="Trivy Security Gate\nHIGH / CRITICAL vulnerabilities blocked", fillcolor="#ECFDF5", color="#34D399"];
-  stage_agent [label="Staging Deploy Agent / Helm\nci-deploy-agents namespace\nServiceAccount: staging-deployer", fillcolor="#EFF6FF", color="#60A5FA"];
+  ghcr [label="GitHub Container Registry (GHCR)\nImmutable SHA256 image digests"];
+  trivy [label="Trivy Security Gate\nHIGH / CRITICAL vulnerabilities blocked", fillcolor="#F0FDF4", color="#4ADE80"];
+  staging_agent [label="Staging Deploy Agent / Helm\nci-deploy-agents namespace\nSA: staging-deployer", fillcolor="#EFF6FF", color="#60A5FA"];
   staging [label="helpdesk-staging namespace\nFrontend • API • PostgreSQL • Redis", fillcolor="#F0FDF4", color="#4ADE80"];
-  approval [label="Manual Production Approval", shape=diamond, style="filled", fillcolor="#FFF7ED", color="#FB923C", width=3.3, height=0.75];
-  prod_agent [label="Production Deploy Agent / Helm\nci-deploy-agents namespace\nServiceAccount: production-deployer", fillcolor="#EFF6FF", color="#60A5FA"];
-  production [label="helpdesk-production namespace\nFrontend • API • PostgreSQL • Redis", fillcolor="#F0FDF4", color="#4ADE80"];
-  controls [label="Cross-cutting controls\nRBAC • dedicated ServiceAccounts • NetworkPolicies • Pod Security • non-root workloads", shape=note, fillcolor="#FFF7ED", color="#FDBA74", width=5.2];
+  approval [label="Manual Production Approval\nNo deploy agent held while waiting", shape=diamond, style="filled", fillcolor="#FFF7ED", color="#FB923C", width=3.7, height=0.9];
+  prod_agent [label="Production Deploy Agent / Helm\nci-deploy-agents namespace\nSA: production-deployer", fillcolor="#EFF6FF", color="#60A5FA"];
+  production [label="helpdesk-production namespace\nDeploy same verified SHA256 digests", fillcolor="#F0FDF4", color="#4ADE80"];
 
   github -> jenkins [label="webhook / checkout"];
-  jenkins -> build [label="create ephemeral pod"];
-  build -> buildkit [label="mTLS"];
+  jenkins -> build [label="create build-agent Pod"];
+  build -> buildkit [label="mTLS image build"];
   buildkit -> ghcr [label="push immutable images"];
   ghcr -> trivy [label="scan by digest"];
-  trivy -> stage_agent [label="security gate passed"];
-  stage_agent -> staging [label="Helm deploy + verify"];
+  trivy -> staging_agent [label="security gate passed"];
+  staging_agent -> staging [label="Helm deploy + verify"];
   staging -> approval [label="validated"];
   approval -> prod_agent [label="approved"];
-  prod_agent -> production [label="Helm deploy same verified SHA256 digests"];
-  production -> controls [style=invis];
+  prod_agent -> production [label="Helm deploy"];
+
+  ghcr -> prod_agent [
+    style=dashed,
+    label="same verified SHA256 digests"
+  ];
 }
