@@ -575,13 +575,17 @@ This project demonstrates:
 
 ---
 
-## Local Lab Limitations
+## Local Lab Scope & Limitations
 
-This is a local engineering laboratory and not a real public Production system.
+The implementation was built and validated on a multi-node Kind cluster running locally under WSL. It is not presented as a public production deployment.
 
-Some managed cloud capabilities are intentionally represented by local Kubernetes equivalents.
+- **AWS/EKS:** documented as an architecture mapping only; no live EKS environment was deployed.
+- **Observability:** metrics, dashboards, and alerting were implemented with Prometheus, Grafana, and Alertmanager; centralized logging is outside the current scope.
+- **Autoscaling:** HPA was validated in Staging; Production uses fixed replica counts in the final local-lab configuration.
+- **Local networking:** some connectivity rules and Kubernetes API addressing are specific to the Kind/WSL environment.
+- **Artifact promotion:** the same immutable SHA256 image digests are promoted from Staging to Production within the pipeline; fully reproducible independent rebuilds are not claimed.
 
-The purpose is to demonstrate the architecture, security model, automation, deployment flow, troubleshooting process and engineering concepts.
+These boundaries distinguish behavior validated in the lab from cloud deployment assumptions.
 
 ---
 
