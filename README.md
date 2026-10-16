@@ -641,11 +641,11 @@ Completed areas include:
 - final platform evidence
 
 
-## Setup, Operations and Current Verification
+## Setup and Operations
 
 - [Setup sequence](docs/setup.md)
 - [Operational runbooks](docs/runbooks/README.md)
-- [Current audit results and limits](docs/audit-verification.md)
+- [Validation and operating scope](docs/validation.md)
 - [Observability scope](docs/observability-scope.md)
 - [Database storage and recovery limits](docs/storage.md)
 

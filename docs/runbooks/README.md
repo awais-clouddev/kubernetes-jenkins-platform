@@ -50,7 +50,7 @@ Restore with pg_restore --single-transaction into a separate newly created
 database. Verify schema and representative records before considering any
 cutover. Remove only the disposable recovery database after testing.
 
-The audit restored a staging dump into a separate temporary database and
+The validation restored a staging dump into a separate temporary database and
 read three tickets successfully. This does not establish off-host recovery,
 point-in-time recovery or recovery after losing the kind node.
 

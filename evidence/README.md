@@ -8,7 +8,7 @@ historical evidence. Until separately parsed and validated, treat it as a
 configuration excerpt, not an installable Jenkins values file.
 
 The historical phase19 negative tests reported "container not found".
-Those errors do not prove traffic denial. A fresh audit-cluster test instead
+Those errors do not prove traffic denial. A fresh validation-cluster test instead
 confirmed a working HTTP connection, timeout after an ingress-deny policy,
 and restored connectivity after removing that policy.
 

@@ -1,8 +1,8 @@
-# Audit Verification — 16 October 2026
+# Validation and Operating Scope
 
 ## Passed
 
-- Four-node kind-jenkins-audit cluster started with Kubernetes v1.37.0.
+- Four-node kind-jenkins-validation cluster started with Kubernetes v1.37.0.
 - NetworkPolicy test: HTTP allowed, denied by policy, restored after removal.
 - Revised API and frontend images built locally and loaded into kind.
 - Staging: two API and two frontend replicas Ready; PostgreSQL and Redis Ready.
@@ -24,7 +24,7 @@ sha256:5530e1b4856016240ecce64ab451927465f1aeb3c60111ff04dca3056308ec46
 Frontend:
 sha256:31e22b8eb0918bcf26c3ac375c9695ae0a9c029a7515cb2b7a73e4217f8f6182
 
-These are local audit builds, not a newly verified registry release.
+These are local validation builds, not a newly verified registry release.
 
 ## Verification limits
 
@@ -39,7 +39,7 @@ Monitoring installation and complete setup-guide reproduction are deferred.
 
 Production delivery, current alert firing/resolution, browser behavior,
 live dependency-outage recovery and off-host disaster recovery were not
-tested during this audit. HPA was disabled for the initial audit deployment.
+tested during this validation. HPA was disabled for the initial validation deployment.
 
 The setup guide documents the intended sequence. Its certificate and
 private-registry provisioning sections require operator preparation.
