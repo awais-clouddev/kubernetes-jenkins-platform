@@ -2,7 +2,7 @@
 
 ## Scope and prerequisites
 
-This guide describes the intended full platform setup. The current audit
+This guide describes the intended full platform setup. The current validation
 verified the application, Envoy routing, probes, API egress discovery,
 deploy-agent gateway access and a disposable database restore. A complete
 fresh Jenkins/BuildKit/monitoring installation using this guide remains
@@ -28,7 +28,7 @@ The configuration creates two application workers and one tainted CI worker.
 The audited node version was Kubernetes v1.37.0 with kind v0.33.0.
 
 On WSL, inspect inotify limits if systemd or kubelet reports fsnotify
-"too many open files". The audit required max_user_instances=1024.
+"too many open files". The validation required max_user_instances=1024.
 A temporary sysctl change resets after some WSL restarts.
 
 ## 2. Verify networking
@@ -170,5 +170,5 @@ Frontend structure checks and HTTP asset checks do not prove browser
 rendering or JavaScript behavior. Verify production independently after
 approval. See runbooks/README.md for failures and rollback.
 
-Local audit images were loaded into kind; this does not verify a revised
+Local validation images were loaded into kind; this does not verify a revised
 registry publication or a complete Jenkins run.
