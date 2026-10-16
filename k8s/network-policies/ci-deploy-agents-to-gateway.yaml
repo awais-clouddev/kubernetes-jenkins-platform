@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-deploy-agents-to-helpdesk-gateway
+  namespace: ci-deploy-agents
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: envoy-gateway-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: proxy
+              gateway.envoyproxy.io/owning-gateway-name: helpdesk-gateway
+      ports:
+        - protocol: TCP
+          port: 10080

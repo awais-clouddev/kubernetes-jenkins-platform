@@ -1,9 +1,14 @@
+import hashlib
 import json
 import os
+import logging
+from contextlib import contextmanager
 
 import psycopg2
 import redis
 from redis.exceptions import RedisError
+from redis.retry import Retry
+from redis.backoff import NoBackoff
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -31,12 +36,39 @@ class TicketStatusUpdate(BaseModel):
     )
 
 
+
+logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def database_session():
+    connection = get_database_connection()
+    cursor = None
+    try:
+        cursor = connection.cursor()
+        yield connection, cursor
+    except Exception:
+        try:
+            connection.rollback()
+        except Exception:
+            logger.exception("Database rollback failed")
+        raise
+    finally:
+        try:
+            if cursor is not None:
+                cursor.close()
+        finally:
+            connection.close()
+
+
 def get_database_connection():
     return psycopg2.connect(
         host=os.getenv("DATABASE_HOST", "postgres"),
         database=os.getenv("DATABASE_NAME", "helpdesk"),
         user=os.getenv("DATABASE_USER", "helpdesk"),
         password=os.environ["DATABASE_PASSWORD"],
+        connect_timeout=5,
+        options="-c statement_timeout=5000 -c lock_timeout=3000",
     )
 
 
@@ -45,6 +77,9 @@ def get_redis_connection():
         host=os.getenv("REDIS_HOST", "redis"),
         port=6379,
         decode_responses=True,
+        socket_connect_timeout=2,
+        socket_timeout=2,
+        retry=Retry(NoBackoff(), 0),
     )
 
 
@@ -86,22 +121,19 @@ def health():
 
 @app.post("/tickets", status_code=201)
 def create_ticket(ticket: TicketCreate):
-    connection = get_database_connection()
-    cursor = connection.cursor()
+    with database_session() as (connection, cursor):
 
-    cursor.execute(
-        """
-        INSERT INTO tickets (employee_name, issue, priority)
-        VALUES (%s, %s, %s)
-        RETURNING id, employee_name, issue, priority, status, created_at;
-        """,
-        (ticket.employee_name, ticket.issue, ticket.priority),
-    )
+        cursor.execute(
+            """
+            INSERT INTO tickets (employee_name, issue, priority)
+            VALUES (%s, %s, %s)
+            RETURNING id, employee_name, issue, priority, status, created_at;
+            """,
+            (ticket.employee_name, ticket.issue, ticket.priority),
+        )
 
-    created_ticket = cursor.fetchone()
-    connection.commit()
-    cursor.close()
-    connection.close()
+        created_ticket = cursor.fetchone()
+        connection.commit()
 
     clear_ticket_cache()
 
@@ -123,10 +155,12 @@ def get_tickets(
 ):
     redis_connection = get_redis_connection()
 
-    cache_key = (
-        f"tickets:search:{search.lower()}:"
-        f"status:{status.lower()}:priority:{priority.lower()}"
-    )
+    cache_key = "tickets:" + hashlib.sha256(
+        json.dumps(
+            [search.lower(), status.lower(), priority.lower()],
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
 
     try:
         cached_tickets = redis_connection.get(cache_key)
@@ -139,50 +173,47 @@ def get_tickets(
             "tickets": json.loads(cached_tickets),
         }
 
-    connection = get_database_connection()
-    cursor = connection.cursor()
+    with database_session() as (connection, cursor):
 
-    conditions = []
-    parameters = []
+        conditions = []
+        parameters = []
 
-    if search:
-        search_pattern = f"%{search}%"
-        conditions.append(
-            """
-            (
-                employee_name ILIKE %s
-                OR issue ILIKE %s
-                OR CAST(id AS TEXT) ILIKE %s
+        if search:
+            search_pattern = f"%{search}%"
+            conditions.append(
+                """
+                (
+                    employee_name ILIKE %s
+                    OR issue ILIKE %s
+                    OR CAST(id AS TEXT) ILIKE %s
+                )
+                """
             )
-            """
-        )
-        parameters.extend(
-            [search_pattern, search_pattern, search_pattern]
-        )
+            parameters.extend(
+                [search_pattern, search_pattern, search_pattern]
+            )
 
-    if status:
-        conditions.append("status = %s")
-        parameters.append(status)
+        if status:
+            conditions.append("LOWER(status) = %s")
+            parameters.append(status.lower())
 
-    if priority:
-        conditions.append("priority = %s")
-        parameters.append(priority)
+        if priority:
+            conditions.append("LOWER(priority) = %s")
+            parameters.append(priority.lower())
 
-    query = """
-        SELECT id, employee_name, issue, priority, status, created_at
-        FROM tickets
-    """
+        query = """
+            SELECT id, employee_name, issue, priority, status, created_at
+            FROM tickets
+        """
 
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
 
-    query += " ORDER BY created_at DESC;"
+        query += " ORDER BY created_at DESC;"
 
-    cursor.execute(query, parameters)
-    rows = cursor.fetchall()
+        cursor.execute(query, parameters)
+        rows = cursor.fetchall()
 
-    cursor.close()
-    connection.close()
 
     tickets = [
         {
@@ -209,29 +240,24 @@ def get_tickets(
 
 @app.patch("/tickets/{ticket_id}/status")
 def update_ticket_status(ticket_id: int, update: TicketStatusUpdate):
-    connection = get_database_connection()
-    cursor = connection.cursor()
+    with database_session() as (connection, cursor):
 
-    cursor.execute(
-        """
-        UPDATE tickets
-        SET status = %s
-        WHERE id = %s
-        RETURNING id, employee_name, issue, priority, status, created_at;
-        """,
-        (update.status, ticket_id),
-    )
+        cursor.execute(
+            """
+            UPDATE tickets
+            SET status = %s
+            WHERE id = %s
+            RETURNING id, employee_name, issue, priority, status, created_at;
+            """,
+            (update.status, ticket_id),
+        )
 
-    updated_ticket = cursor.fetchone()
+        updated_ticket = cursor.fetchone()
 
-    if updated_ticket is None:
-        cursor.close()
-        connection.close()
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        if updated_ticket is None:
+            raise HTTPException(status_code=404, detail="Ticket not found")
 
-    connection.commit()
-    cursor.close()
-    connection.close()
+        connection.commit()
 
     clear_ticket_cache()
 
@@ -247,26 +273,23 @@ def update_ticket_status(ticket_id: int, update: TicketStatusUpdate):
 
 @app.get("/dashboard")
 def dashboard_summary():
-    connection = get_database_connection()
-    cursor = connection.cursor()
+    with database_session() as (connection, cursor):
 
-    cursor.execute("SELECT COUNT(*) FROM tickets;")
-    total = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM tickets;")
+        total = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM tickets WHERE status='Open';")
-    open_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM tickets WHERE status='Open';")
+        open_count = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM tickets WHERE status='In Progress';")
-    progress_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM tickets WHERE status='In Progress';")
+        progress_count = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM tickets WHERE status='Resolved';")
-    resolved_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM tickets WHERE status='Resolved';")
+        resolved_count = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM tickets WHERE priority='Critical';")
-    critical_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM tickets WHERE priority='Critical';")
+        critical_count = cursor.fetchone()[0]
 
-    cursor.close()
-    connection.close()
 
     return {
         "total": total,

@@ -20,3 +20,20 @@ The Jenkins controller remains a high-trust component because it can request dep
 Therefore, compromise of the Jenkins controller could potentially allow an attacker to request a privileged deployment agent even though normal build agents do not possess deployment permissions.
 
 Protecting the Jenkins controller, its configuration, credentials, RBAC permissions, and administrative access is therefore critical.
+
+## Secret Access and Deployment Trust
+
+Both deployer Roles grant Secret read and write access throughout their
+respective application namespaces. Helm uses Secrets for release records,
+but these permissions also cover runtime credentials and image-pull Secrets.
+Kubernetes RBAC does not restrict this access by Secret label or prefix.
+
+Deployers must therefore be treated as trusted namespace operators.
+Permission to modify workload specifications also permits creating workloads
+that consume namespace Secrets. These Roles do not provide isolation from
+application credentials.
+
+Keep staging and production identities separate. Production approval is a
+workflow control; it does not remove permissions from a credential already
+available to a running deploy agent. Only trusted, reviewed pipeline code
+should receive these identities.
