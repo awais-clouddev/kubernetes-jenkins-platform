@@ -30,8 +30,12 @@ These are local audit builds, not a newly verified registry release.
 
 The revised full Jenkins pipeline has not run. Its functional gate was
 exercised independently in the equivalent deploy-tools test environment.
-Fresh BuildKit certificate provisioning, Jenkins installation and monitoring
-installation from the new setup guide remain unverified.
+Fresh audit BuildKit certificates were generated and verified. BuildKit
+became Ready and its local worker query succeeded. Jenkins completed plugin
+initialization and its Pod became Ready.
+
+Jenkins browser access/login and the revised full pipeline remain unverified.
+Monitoring installation and complete setup-guide reproduction are deferred.
 
 Production delivery, current alert firing/resolution, browser behavior,
 live dependency-outage recovery and off-host disaster recovery were not
