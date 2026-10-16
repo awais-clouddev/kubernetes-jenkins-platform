@@ -640,3 +640,14 @@ Completed areas include:
 - worker-drain resilience
 - final platform evidence
 
+
+## Setup, Operations and Current Verification
+
+- [Setup sequence](docs/setup.md)
+- [Operational runbooks](docs/runbooks/README.md)
+- [Current audit results and limits](docs/audit-verification.md)
+- [Observability scope](docs/observability-scope.md)
+- [Database storage and recovery limits](docs/storage.md)
+
+Frontend pipeline checks validate file structure; gateway checks validate
+HTTP responses and ticket operations. Browser execution is not established.

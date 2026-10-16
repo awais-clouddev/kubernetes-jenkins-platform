@@ -29,6 +29,24 @@ spec:
       containers:
         - name: redis
           image: public.ecr.aws/docker/library/redis:7-alpine
+          startupProbe:
+            exec:
+              command: ["sh", "-c", "[ \"$(redis-cli -h 127.0.0.1 ping)\" = PONG ]"]
+            timeoutSeconds: 3
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "[ \"$(redis-cli -h 127.0.0.1 ping)\" = PONG ]"]
+            timeoutSeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "[ \"$(redis-cli -h 127.0.0.1 ping)\" = PONG ]"]
+            timeoutSeconds: 3
+            periodSeconds: 10
+            failureThreshold: 6
           resources:
 {{ toYaml .Values.redis.resources | indent 12 }}
           ports:

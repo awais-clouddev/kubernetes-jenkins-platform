@@ -34,6 +34,24 @@ spec:
       containers:
         - name: postgres
           image: public.ecr.aws/docker/library/postgres:16
+          startupProbe:
+            exec:
+              command: ["sh", "-c", "exec pg_isready -h 127.0.0.1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            timeoutSeconds: 3
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "exec pg_isready -h 127.0.0.1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            timeoutSeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "exec pg_isready -h 127.0.0.1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            timeoutSeconds: 3
+            periodSeconds: 10
+            failureThreshold: 6
           resources:
 {{ toYaml .Values.postgresql.resources | indent 12 }}
           ports:

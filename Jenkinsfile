@@ -35,13 +35,13 @@ node('k8s-build-agent') {
                 }
             }
 
-            stage('Frontend Tests') {
+            stage('Frontend Structure Validation') {
                 sh '''
                     test -s frontend/index.html
                     test -s frontend/app.js
                     test -s frontend/style.css
                     grep -qi '<html' frontend/index.html
-                    echo FRONTEND_TEST_OK
+                    echo FRONTEND_STRUCTURE_OK
                 '''
             }
 
@@ -309,7 +309,7 @@ PY2
               stage('Prepare Deployment Artifact') {
                   stash(
                       name: 'deployment-chart',
-                      includes: 'helm/helpdesk/**,evidence/phase10-pipeline/**',
+                      includes: 'helm/helpdesk/**,scripts/smoke-test.py,evidence/phase10-pipeline/**',
                       useDefaultExcludes: false
                   )
 
@@ -376,12 +376,19 @@ node('k8s-staging-deploy-agent') {
                           echo "verification=PASS"
                         } > evidence/phase10-pipeline/staging-deployment.txt
 
+
+                        python3 scripts/smoke-test.py \
+                          --url "http://envoy-envoy-gateway-system-helpdesk-gateway-5a4f6da5.envoy-gateway-system.svc.cluster.local" \
+                          --host staging.helpdesk.local \
+                          > evidence/phase10-pipeline/staging-functional.txt
+                        cat evidence/phase10-pipeline/staging-functional.txt
+
                         echo "STAGING_DEPLOYMENT_VERIFIED=true"
                     '''
                 }
 
                 archiveArtifacts(
-                    artifacts: 'evidence/phase10-pipeline/staging-deployment.txt',
+                    artifacts: 'evidence/phase10-pipeline/staging-deployment.txt,evidence/phase10-pipeline/staging-functional.txt',
                     fingerprint: true
                 )
             }

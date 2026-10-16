@@ -50,8 +50,8 @@ spec:
             httpGet:
               path: /health
               port: http
-            periodSeconds: 5
-            timeoutSeconds: 2
+            periodSeconds: 10
+            timeoutSeconds: 8
             failureThreshold: 3
           livenessProbe:
             tcpSocket:
